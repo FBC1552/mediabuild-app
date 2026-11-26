@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediaBuild</title>
+    <!--
+      Tema antes do primeiro paint.
+
+      Este script é síncrono e fica no <head> de propósito: qualquer coisa que
+      dependa do bundle (inclusive `src/tema.ts`, que faz exatamente isto de
+      novo no import) só roda DEPOIS que o navegador já pintou o fundo. Quem
+      abre o app no escuro veria um flash branco de um quadro inteiro — o
+      "FOUC de tema", e é bem mais desconfortável no escuro do que parece
+      descrito.
+
+      É a única duplicação de lógica de tema do projeto, e é deliberada:
+      são seis linhas sem dependência, contra um flash que nenhum outro
+      mecanismo evita. O contrato que ela precisa manter com `src/tema.ts` é
+      pequeno — a chave 'mdbd:tema', os três modos e os dois atributos.
+    -->
+    <script>
+      ;(function () {
+        var modo = 'sistema'
+        try {
+          var salvo = localStorage.getItem('mdbd:tema')
+          if (salvo === 'claro' || salvo === 'escuro' || salvo === 'sistema') modo = salvo
+        } catch (e) {
+          /* localStorage bloqueado: segue no padrão. */
+        }
+        var escuro =
+          modo === 'escuro' ||
+          (modo === 'sistema' &&
+            typeof matchMedia === 'function' &&
+            matchMedia('(prefers-color-scheme: dark)').matches)
+        var raiz = document.documentElement
+        raiz.setAttribute('data-tema', modo)
+        raiz.setAttribute('data-aparencia', escuro ? 'escuro' : 'claro')
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mdbd}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mdbd}
+      POSTGRES_DB: ${POSTGRES_DB:-mediabuild}
+    ports:
+      # Só na própria máquina: com as senhas de exemplo, expor na rede
+      # entregaria o banco a quem estivesse na mesma rede.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mdbd} -d ${POSTGRES_DB:-mediabuild}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mdbd}:${POSTGRES_PASSWORD:-mdbd}@db:5432/${POSTGRES_DB:-mediabuild}
+      DEBUG: ${DEBUG:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Sem valor: o config decide pelo DEBUG (JSON em produção).
+      LOG_JSON: ${LOG_JSON:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      SESSAO_DURACAO_HORAS: ${SESSAO_DURACAO_HORAS:-12}
+      # Credencial do primeiro admin. O default aqui é um placeholder de
+      # propósito — a senha real vem do .env, que não é versionado, e com
+      # DEBUG=false o placeholder derruba o boot.
+      ADMIN_LOGIN_INICIAL: ${ADMIN_LOGIN_INICIAL:-admin.mediabuilder}
+      ADMIN_SENHA_INICIAL: ${ADMIN_SENHA_INICIAL:-mudar-agora}
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    volumes:
+      # Bind mount: hot reload do uvicorn pega alterações sem rebuild.
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  web:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${WEB_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      # Volume anônimo protege o node_modules da imagem de ser
+      # sobrescrito pelo bind mount do host.
+      - /app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

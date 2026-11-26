@@ -1,0 +1,240 @@
+/* ===========================================================================
+   MediaBuild · aba Gerar
+   ---------------------------------------------------------------------------
+   Layout de duas colunas: contexto (plataforma + estrutura da campanha) à
+   esquerda, trabalho (formulário do nível corrente + ação primária) à direita.
+
+   Responsividade por @container, nunca @media: o palco do catálogo é um
+   <div>, não a janela. `.gerar-palco` declara o contêiner nomeado `gerar`;
+   quem consulta é `.gerar-colunas`, um nível abaixo — um elemento não pode
+   consultar a si mesmo.
+
+   A ordem do DOM é a mesma nos dois formatos (plataforma → estrutura →
+   formulário). Nada é reordenado por `order`: reordenar visualmente sem
+   reordenar o DOM descola a ordem de foco da ordem de leitura (WCAG 2.4.3),
+   e o preço de ler a estrutura antes do formulário no estreito é menor que o
+   de um Tab que salta para trás.
+
+   Nenhum valor literal de cor, raio, sombra, espaçamento ou duração.
+   =========================================================================== */
+
+.gerar-palco {
+  container: gerar / inline-size;
+}
+
+.gerar-colunas {
+  /* Largura da coluna de contexto: estreita o bastante para sobrar espaço
+     para 2-3 campos por linha no formulário, larga o bastante para um nome
+     de grupo com o código ao lado. */
+  --gerar-coluna-contexto: 320px;
+
+  display: grid;
+  gap: var(--esp-5);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.gerar-coluna {
+  min-inline-size: 0;
+}
+
+@container gerar (min-width: 880px) {
+  .gerar-colunas {
+    grid-template-columns: var(--gerar-coluna-contexto) minmax(0, 1fr);
+  }
+
+  .gerar-plataforma {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .gerar-coluna[data-lado='contexto'] {
+    grid-column: 1;
+    grid-row: 2;
+    /* A estrutura acompanha a rolagem do formulário: ela é o mapa de onde o
+       que está sendo preenchido vai cair. */
+    position: sticky;
+    inset-block-start: var(--esp-5);
+  }
+
+  .gerar-coluna[data-lado='formulario'] {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+
+/* Contêiner largo (monitor de trabalho, não notebook): a coluna de contexto
+   engorda. O que ela mostra é nome de campanha e de grupo — que são longos —
+   e a alternativa a mais largura é quebra de linha em toda a árvore. O
+   formulário continua ficando com o resto, que é a maior parte. */
+@container gerar (min-width: 1240px) {
+  .gerar-colunas {
+    --gerar-coluna-contexto: 380px;
+    gap: var(--esp-7);
+  }
+}
+
+/* O logo da plataforma escolhida fica ao lado do seletor, não dentro dele:
+   `<option>` não aceita imagem. O seletor toma o resto da linha. */
+.gerar-plataforma select {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* --- rodapé da coluna do formulário --------------------------------------
+   A ação primária ancora o pé da coluna; a dica de por que ela ainda está
+   desabilitada fica do lado oposto, na mesma linha. */
+.gerar-rodape {
+  padding-block-start: var(--esp-2);
+}
+
+/* --- árvore da estrutura -------------------------------------------------
+   Sem editar e sem excluir nomenclatura, aqui ou em qualquer lugar (D-004).
+   O código entre parênteses é pontuação decorativa e por isso mora no CSS:
+   no DOM o match ID fica limpo, do jeito que um leitor de tela quer ouvir. */
+.arvore-cartao .arvore-lista {
+  gap: var(--esp-3);
+}
+
+.arvore-cartao .arvore-codigo::before {
+  content: '(';
+}
+
+.arvore-cartao .arvore-codigo::after {
+  content: ')';
+}
+
+/* Uma linha da árvore: ícone/alternador, nome, código e a ação da linha. */
+.arvore-no {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.arvore-no > .arvore-nome {
+  overflow-wrap: anywhere;
+}
+
+/* O ícone de nível é o traço mais leve da linha: hierarquia, não ênfase. */
+.arvore-no > .icone {
+  color: var(--texto-fraco);
+}
+
+.arvore-no > .empurra {
+  margin-inline-start: auto;
+}
+
+/* A campanha é a raiz: mesma linha, um degrau acima em peso. */
+.arvore-no[data-nivel='campanha'] .arvore-nome {
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-forte);
+}
+
+/* Botão quadrado de ícone (expandir/recolher e "+"). Alvo de 34px, acima do
+   mínimo de 24px do WCAG 2.5.8, e o nome acessível carrega o grupo — numa
+   lista de N grupos, N botões "+" idênticos seriam indistinguíveis. */
+.arvore-cartao .arvore-botao {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--altura-controle);
+  block-size: var(--altura-controle);
+  padding: 0;
+  font-size: var(--tipo-lg);
+  font-weight: var(--peso-forte);
+  line-height: var(--entrelinha-apertada);
+  color: var(--texto-suave);
+  background: var(--card);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-xs);
+  transition: background var(--dur-rapida) var(--curva-padrao),
+    color var(--dur-rapida) var(--curva-padrao);
+}
+
+.arvore-cartao .arvore-botao:hover:not(:disabled) {
+  background: var(--neutro-clara);
+  color: var(--texto);
+}
+
+.arvore-cartao .arvore-botao[data-acao='adicionar'] {
+  color: var(--acao);
+  background: var(--acao-clara);
+  border-color: var(--acao-borda);
+}
+
+.arvore-cartao .arvore-botao[data-acao='adicionar']:hover:not(:disabled) {
+  background: var(--acao-borda);
+  color: var(--acao-escura);
+}
+
+/* ===========================================================================
+   Barra de preview — superfície invertida
+   ---------------------------------------------------------------------------
+   O resultado ao pé do formulário. A inversão é o que o separa dos campos
+   sem precisar de cor de estado — e ela continua existindo no TEMA ESCURO,
+   onde `--card-inverso` desce para o degrau mais fundo da rampa em vez de
+   subir. A barra é assinatura do artefato entregue, não consequência do tema.
+
+   Contraste sobre --card-inverso (claro / escuro):
+     --texto-inverso        16.4 / 19.3:1   (a nomenclatura)
+     --texto-inverso-suave   7.6 /  8.9:1   (título e contador)
+     --alerta-inversa       10.3 / 12.1:1   (contador perto do limite)
+     --acao-inversa          6.8 /  7.9:1   (anel de foco)
+   O estado de ERRO não usa esta barra: não existe token de erro para
+   superfície invertida, e vermelho aproximado no escuro reprova AA. Erro
+   continua no bloco `.laudo[data-tipo='erro']`, claro.
+   =========================================================================== */
+.preview-barra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  padding: var(--esp-4) var(--esp-5);
+  background: var(--card-inverso);
+  border: 1px solid var(--borda-inversa);
+  border-radius: var(--raio);
+}
+
+.preview-titulo {
+  margin: 0;
+  font-size: var(--tipo-xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: var(--tracking-rotulo);
+  text-transform: uppercase;
+  color: var(--texto-inverso-suave);
+}
+
+.preview-barra .nomenclatura {
+  color: var(--texto-inverso);
+}
+
+.preview-medida {
+  margin: 0;
+  font-size: var(--tipo-sm);
+  color: var(--texto-inverso-suave);
+}
+
+.preview-medida[data-tom='alerta'] {
+  color: var(--alerta-inversa);
+}
+
+/* Copiar dentro do escuro: contorno em vez de preenchimento, para não
+   competir com a ação primária do rodapé. */
+.preview-barra .botao[data-variante='secundario'] {
+  color: var(--texto-inverso);
+  background: transparent;
+  border-color: var(--texto-inverso-suave);
+}
+
+.preview-barra .botao[data-variante='secundario']:hover:not(:disabled) {
+  background: var(--borda-inversa);
+  color: var(--texto-inverso);
+}
+
+/* O azul de ação do tema claro dá 3.3:1 sobre o escuro — passa raspando em
+   1.4.11 e some no halo. Aqui o anel é o azul da superfície invertida. */
+.preview-barra .botao:focus-visible {
+  outline-color: var(--acao-inversa);
+  box-shadow: var(--halo-foco-inverso);
+}

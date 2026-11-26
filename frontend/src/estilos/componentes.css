@@ -1,0 +1,1318 @@
+/* ===========================================================================
+   MediaBuild · camada de componentes
+   ---------------------------------------------------------------------------
+   Variante e tamanho SEMPRE viram atributo no DOM (data-variante,
+   data-tamanho), estilizados por seletor de atributo. Nunca style inline,
+   nunca booleano solto acumulando exceção. Nenhum valor literal aqui: cor,
+   raio, sombra, espaçamento e duração saem de index.css.
+
+   Nenhum componente define margem externa. Espaçamento entre irmãos é do
+   contêiner (.pilha / .linha / .grade, em layout.css).
+   =========================================================================== */
+
+/* ===========================================================================
+   1 · Identidade tipográfica da marca
+   ---------------------------------------------------------------------------
+   Duas peças distintas: o monograma "MD" (o objeto que quica) e o logotipo
+   "MDBUILDER" (o nome por extenso). Mesma família, tratamentos opostos:
+   o monograma é apertado e pesado; o logotipo é espaçado e leve, para não
+   competir com o monograma no mesmo campo visual.
+   =========================================================================== */
+
+.marca {
+  font-family: var(--fonte-marca);
+  font-weight: var(--peso-marca);
+  letter-spacing: var(--tracking-marca);
+  line-height: var(--entrelinha-apertada);
+  /* Números tabulares e formas sem ligadura: o monograma precisa ser
+     geometricamente estável enquanto se move. */
+  font-variant-ligatures: none;
+  font-feature-settings: 'tnum' 1;
+  color: var(--marca-atual, var(--acao));
+  transition: color var(--dur-media) var(--curva-padrao);
+}
+
+/* Monograma — o alvo em movimento. Agora é o símbolo da marca (imagem), não
+   mais as letras "MD"; o logotipo textual continua sendo `.marca-logotipo`. */
+.marca-monograma {
+  display: grid;
+  place-items: center;
+  /* Alvo em movimento: 44×44 é piso do SC 2.5.8 para alvo parado; aqui é o
+     mínimo absoluto e o token de altura hero dá folga. */
+  min-inline-size: var(--altura-controle-hero);
+  min-block-size: var(--altura-controle-hero);
+  padding: var(--esp-3);
+  font-size: var(--tipo-4xl);
+  background: none;
+  border: 0;
+  border-radius: var(--raio-lg);
+  cursor: pointer;
+}
+
+/* O símbolo é bitmap: `color` não o alcança, então a cor sorteada a cada
+   colisão passa a viver no halo atrás dele. Sem isso a troca de cor — que é o
+   feedback de que a marca bateu em alguma parede — ficaria invisível. */
+.marca-simbolo {
+  inline-size: var(--marca-simbolo-tamanho, var(--tamanho-marca));
+  block-size: var(--marca-simbolo-tamanho, var(--tamanho-marca));
+  display: block;
+  object-fit: contain;
+  /* Halo curto e denso, não difuso: o borrão largo espalhava a cor por cima
+     das bordas do símbolo e o fazia parecer lavado. */
+  filter: drop-shadow(0 0 0.35rem var(--marca-atual, transparent))
+    drop-shadow(var(--sombra-simbolo));
+  transition: filter var(--dur-media) var(--curva-padrao);
+}
+
+.marca-monograma:focus-visible {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+  box-shadow: var(--halo-foco);
+}
+
+/* Logotipo "MDBUILDER" — travessão de tracking largo, caixa alta. */
+.marca-logotipo {
+  font-size: var(--tipo-lg);
+  font-weight: var(--peso-forte);
+  letter-spacing: var(--tracking-legenda);
+  text-transform: uppercase;
+  /* O tracking largo cria um vão fantasma à direita da última letra; o
+     recuo negativo devolve o bloco ao eixo óptico central. */
+  margin-inline-end: calc(var(--tracking-legenda) * -1);
+  color: var(--texto);
+}
+
+.marca-subtitulo {
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-normal);
+  color: var(--texto-suave);
+  line-height: var(--entrelinha);
+}
+
+/* ===========================================================================
+   2 · Botão
+   ---------------------------------------------------------------------------
+   `.botao` é a classe canônica. O seletor de elemento `button` de index.css
+   continua valendo como piso para os botões antigos e não é removido agora.
+   =========================================================================== */
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-2);
+  block-size: var(--altura-controle);
+  padding-inline: var(--esp-5);
+  font: inherit;
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-medio);
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: var(--raio-sm);
+  cursor: pointer;
+  text-decoration: none;
+  background: var(--acao);
+  color: var(--texto-em-preenchimento);
+  transition: background-color var(--dur-rapida) var(--curva-padrao),
+    border-color var(--dur-rapida) var(--curva-padrao),
+    color var(--dur-rapida) var(--curva-padrao),
+    box-shadow var(--dur-rapida) var(--curva-padrao),
+    transform var(--dur-instantanea) var(--curva-padrao);
+}
+
+.botao[data-tamanho='sm'] {
+  block-size: var(--altura-controle-sm);
+  padding-inline: var(--esp-4);
+  font-size: var(--tipo-sm);
+}
+
+.botao[data-tamanho='lg'] {
+  block-size: var(--altura-controle-lg);
+  padding-inline: var(--esp-7);
+}
+
+/* Hero — a MÉTRICA do CTA `Escolher assunto`/`Gerar nomenclatura`: altura,
+   folga e tipo maiores. Eixo de tamanho, independente de identidade — por
+   isso serve tanto para a ação primária quanto para a secundária ao lado
+   dela, sem repetir a métrica numa classe de escape por tela. */
+.botao[data-tamanho='hero'] {
+  block-size: var(--altura-controle-hero);
+  padding-inline: var(--esp-9);
+  font-size: var(--tipo-xl);
+  font-weight: var(--peso-forte);
+  letter-spacing: var(--tracking-titulo);
+  border-radius: var(--raio-lg);
+}
+
+/* Elevação é identidade de AÇÃO PRIMÁRIA, não de tamanho: só o botão
+   primário (sem data-variante — é o valor implícito) ganha sombra quando
+   está no tamanho hero. É o único elemento da splash com elevação, para
+   vencer o ruído do monograma em movimento sem recorrer a cor nova. O botão
+   secundário no mesmo tamanho herda só a métrica acima, não isto. */
+.botao[data-tamanho='hero']:not([data-variante]) {
+  box-shadow: var(--sombra-md);
+}
+
+.botao[data-tamanho='hero']:not([data-variante]):hover:not(:disabled, [aria-disabled='true']) {
+  box-shadow: var(--sombra-lg);
+  /* 1px, não 4: é confirmação de alvo, não decolagem. Não anima largura. */
+  transform: translateY(-1px);
+}
+
+.botao[data-tamanho='hero']:not([data-variante]):active:not(:disabled, [aria-disabled='true']) {
+  transform: translateY(0);
+  box-shadow: var(--sombra);
+}
+
+.botao:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--acao-escura);
+}
+
+.botao:active:not(:disabled, [aria-disabled='true']) {
+  transform: translateY(1px);
+}
+
+.botao:focus-visible {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+  box-shadow: var(--halo-foco);
+}
+
+.botao[data-variante='secundario'] {
+  background: var(--card);
+  color: var(--texto);
+  border-color: var(--borda-forte);
+}
+
+.botao[data-variante='secundario']:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--fundo);
+  border-color: var(--texto-fraco);
+}
+
+.botao[data-variante='fantasma'] {
+  background: transparent;
+  color: var(--acao);
+}
+
+.botao[data-variante='fantasma']:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--acao-clara);
+}
+
+.botao[data-variante='perigo'] {
+  background: var(--erro);
+}
+
+.botao[data-variante='perigo']:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--erro-escura);
+}
+
+.botao[data-variante='perigo']:focus-visible {
+  box-shadow: var(--halo-foco-erro);
+}
+
+.botao:disabled,
+.botao[aria-disabled='true'] {
+  background: var(--desabilitado-fundo);
+  color: var(--desabilitado-texto);
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+  cursor: not-allowed;
+}
+
+/* Carregando: largura estável. O rótulo continua no fluxo (invisível para o
+   olho, presente para o layout) e o spinner é sobreposto — trocar o texto
+   pelo spinner faria o botão encolher e o ponteiro perder o alvo. */
+.botao[data-carregando='true'] {
+  position: relative;
+  cursor: progress;
+  pointer-events: none;
+}
+
+.botao[data-carregando='true'] > .botao-rotulo {
+  visibility: hidden;
+}
+
+.botao-giro {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* ===========================================================================
+   3 · Cartão de opção (seletor de assunto)
+   ---------------------------------------------------------------------------
+   Duas marcações diferentes com a mesma aparência: <a href> quando
+   disponível, <button aria-disabled="true"> quando não.
+   =========================================================================== */
+
+.cartao-opcao {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--esp-3);
+  block-size: 100%;
+  padding: var(--esp-7);
+  text-align: start;
+  font: inherit;
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-lg);
+  box-shadow: var(--sombra-sm);
+  color: var(--texto);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color var(--dur-rapida) var(--curva-padrao),
+    box-shadow var(--dur-rapida) var(--curva-padrao),
+    transform var(--dur-rapida) var(--curva-padrao);
+}
+
+.cartao-opcao-titulo {
+  font-size: var(--tipo-xl);
+  font-weight: var(--peso-forte);
+  line-height: var(--entrelinha-apertada);
+}
+
+.cartao-opcao-descricao {
+  font-size: var(--tipo-base);
+  color: var(--texto-suave);
+  line-height: var(--entrelinha);
+}
+
+.cartao-opcao:hover {
+  border-color: var(--acao-borda);
+  box-shadow: var(--sombra-md);
+  transform: translateY(-2px);
+}
+
+.cartao-opcao:active {
+  transform: translateY(0);
+  box-shadow: var(--sombra-sm);
+}
+
+.cartao-opcao:focus-visible {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+  box-shadow: var(--halo-foco);
+}
+
+/* Indisponível ("Em breve").
+   1. SEM opacity global — opacity derruba o texto abaixo de 4.5:1 e vira
+      falha de WCAG 1.4.3. A atenuação é cor explícita, cada peça com um
+      valor que ainda passa AA.
+   2. SEM reação a hover, elevação ou mudança de borda — reação é promessa,
+      e não há nada para entregar.
+   3. cursor: default, não not-allowed — o cursor proibido comunica "você
+      errou", e o usuário não errou nada.
+   4. Continua focável (aria-disabled, não disabled nativo), então o foco
+      visível é obrigatório: sem ele o teclado entra num item sem marca. */
+.cartao-opcao[aria-disabled='true'] {
+  background: var(--fundo);
+  border-color: var(--borda);
+  border-style: dashed;
+  box-shadow: none;
+  cursor: default;
+  color: var(--texto-suave);
+}
+
+.cartao-opcao[aria-disabled='true'] .cartao-opcao-titulo {
+  color: var(--texto-suave); /* 6.05:1 no --fundo */
+}
+
+.cartao-opcao[aria-disabled='true'] .cartao-opcao-descricao {
+  color: var(--texto-fraco); /* 4.57:1 no --fundo */
+}
+
+.cartao-opcao[aria-disabled='true']:hover,
+.cartao-opcao[aria-disabled='true']:active {
+  border-color: var(--borda);
+  box-shadow: none;
+  transform: none;
+}
+
+.cartao-opcao[aria-disabled='true']:focus-visible {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+  box-shadow: var(--halo-foco);
+}
+
+/* ===========================================================================
+   4 · Selo
+   =========================================================================== */
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+  padding: 0 var(--esp-3);
+  block-size: var(--altura-controle-sm);
+  font-size: var(--tipo-xs);
+  font-weight: var(--peso-forte);
+  letter-spacing: var(--tracking-rotulo);
+  text-transform: uppercase;
+  white-space: nowrap;
+  border-radius: var(--raio-pilula);
+  background: var(--neutro-clara);
+  border: 1px solid var(--neutro-borda);
+  color: var(--texto-suave);
+}
+
+.selo[data-variante='acao'] {
+  background: var(--acao-clara);
+  border-color: var(--acao-borda);
+  color: var(--acao-escura);
+}
+
+.selo[data-variante='ok'] {
+  background: var(--ok-clara);
+  border-color: var(--ok-borda);
+  color: var(--ok-escura);
+}
+
+.selo[data-variante='erro'] {
+  background: var(--erro-clara);
+  border-color: var(--erro-borda);
+  color: var(--erro-escura);
+}
+
+.selo[data-variante='alerta'] {
+  background: var(--alerta-clara);
+  border-color: var(--alerta-borda);
+  color: var(--alerta);
+}
+
+/* ===========================================================================
+   5 · Carregamento — esqueleto e spinner
+   ---------------------------------------------------------------------------
+   Os dois carregam data-movimento='essencial' no elemento, para escapar do
+   reset de prefers-reduced-motion (ver o bloco em index.css). Congelar um
+   indicador de progresso comunica "travou".
+   =========================================================================== */
+
+.esqueleto {
+  --esqueleto-base: var(--neutro-clara);
+  display: block;
+  inline-size: 100%;
+  block-size: var(--esqueleto-altura, 1em);
+  border-radius: var(--raio-xs);
+  background-color: var(--esqueleto-base);
+  /* O brilho é do TEMA, não do componente: branco a 70% varrendo uma
+     superfície escura vira um flash. Ver `--esqueleto-brilho` em index.css. */
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--esqueleto-brilho) 50%,
+    transparent 100%
+  );
+  background-size: 240px 100%;
+  background-repeat: no-repeat;
+  animation: esqueleto-varre 1.4s var(--curva-padrao) infinite;
+}
+
+.esqueleto[data-forma='texto'] { --esqueleto-altura: var(--esp-4); }
+.esqueleto[data-forma='titulo'] { --esqueleto-altura: var(--esp-7); }
+.esqueleto[data-forma='controle'] { --esqueleto-altura: var(--altura-controle); }
+.esqueleto[data-forma='cartao'] {
+  --esqueleto-altura: var(--esp-12);
+  border-radius: var(--raio-lg);
+}
+/* Última linha de parágrafo mais curta — sem isso o bloco parece uma barra. */
+.esqueleto[data-final='true'] { inline-size: 62%; }
+
+@keyframes esqueleto-varre {
+  from { background-position: -240px 0; }
+  to { background-position: calc(100% + 240px) 0; }
+}
+
+@keyframes esqueleto-pulso {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+.giro {
+  display: inline-block;
+  inline-size: var(--giro-tamanho, 1em);
+  block-size: var(--giro-tamanho, 1em);
+  border: 2px solid currentColor;
+  border-block-start-color: transparent;
+  border-radius: var(--raio-pilula);
+  /* Só transform anima. */
+  animation: giro-volta var(--dur-giro) linear infinite;
+}
+
+.giro[data-tamanho='lg'] { --giro-tamanho: var(--esp-8); }
+
+@keyframes giro-volta {
+  to { transform: rotate(360deg); }
+}
+
+/* Bloco de carregamento de região inteira: altura reservada, para a página
+   não saltar quando o conteúdo chegar. */
+.carregando-regiao {
+  display: grid;
+  place-items: center;
+  gap: var(--esp-4);
+  min-block-size: var(--esp-12);
+  color: var(--texto-suave);
+  font-size: var(--tipo-md);
+}
+
+/* ===========================================================================
+   6 · Estados — vazio e erro
+   ---------------------------------------------------------------------------
+   Vazio inicial e "nenhum resultado no filtro" são estados diferentes com
+   redação diferente; a casca é a mesma, quem troca é o conteúdo.
+   =========================================================================== */
+
+.estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-4);
+  padding: var(--esp-9) var(--esp-6);
+  text-align: center;
+  border-radius: var(--raio);
+}
+
+.estado-titulo {
+  font-size: var(--tipo-xl);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+}
+
+.estado-texto {
+  max-width: var(--largura-leitura-curta);
+  font-size: var(--tipo-base);
+  color: var(--texto-suave);
+  line-height: var(--entrelinha);
+}
+
+/* Vazio: discreto, tracejado — o vazio é normal, não é falha. */
+.estado[data-tipo='vazio'] {
+  background: var(--fundo);
+  border: 1px dashed var(--borda-forte);
+}
+
+/* Sem resultado de filtro: mesma casca, e a ação de limpar filtro é o ponto
+   inteiro do estado. */
+.estado[data-tipo='sem-resultado'] {
+  background: var(--fundo);
+  border: 1px dashed var(--borda-forte);
+}
+
+/* Erro: cor de estado, contida — o vermelho fica na borda e no título, não
+   no fundo inteiro, que faria a tela gritar. */
+.estado[data-tipo='erro'] {
+  background: var(--erro-clara);
+  border: 1px solid var(--erro-borda);
+}
+
+.estado[data-tipo='erro'] .estado-titulo {
+  color: var(--erro-escura);
+}
+
+/* Erro por exemplo do catálogo: ocupa o lugar do palco. */
+.estado[data-tipo='erro-exemplo'] {
+  background: var(--erro-clara);
+  border: 1px dashed var(--erro-borda);
+  padding: var(--esp-7) var(--esp-5);
+}
+
+.estado-id {
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+}
+
+/* Tela de erro inteira (rota desconhecida, seção inexistente). */
+.estado[data-tipo='rota'] {
+  padding-block: var(--esp-12);
+  gap: var(--esp-5);
+}
+
+.estado[data-tipo='rota'] .estado-titulo {
+  font-size: var(--tipo-3xl);
+}
+
+/* ===========================================================================
+   7 · Entrada de conteúdo
+   ---------------------------------------------------------------------------
+   Vale animar: nomenclatura gerada, revelação do próximo nível da cascata,
+   confirmação de cópia. Não vale: troca de aba, hover de linha de tabela.
+   Só transform e opacity.
+   =========================================================================== */
+
+@keyframes surge {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.surge {
+  animation: surge var(--dur-lenta) var(--curva-entrada) both;
+}
+
+/* ===========================================================================
+   8 · Peças das telas novas (roteamento, splash, catálogo)
+   ---------------------------------------------------------------------------
+   Só o indispensável para tirar os `style={{}}` que existiam no App.tsx e
+   sustentar a anatomia já descrita em layout.css. Nenhum valor literal.
+   =========================================================================== */
+
+.titulo-tela {
+  font-size: var(--tipo-2xl);
+}
+
+.titulo-tela:focus-visible {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+}
+
+/* --- abas (role="tablist") --- */
+.abas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1);
+  border-bottom: 1px solid var(--borda);
+}
+
+.aba {
+  background: transparent;
+  color: var(--texto-suave);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: var(--esp-3) var(--esp-5);
+  margin-bottom: -1px;
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+}
+
+.aba:hover:not([aria-selected='true']) {
+  color: var(--texto);
+  background: transparent;
+}
+
+.aba[aria-selected='true'] {
+  color: var(--acao);
+  border-bottom-color: var(--acao);
+  font-weight: var(--peso-forte);
+  background: transparent;
+}
+
+/* --- aviso de erro de topo de página --- */
+.aviso-erro {
+  padding: var(--esp-4) var(--esp-5);
+  background: var(--erro-clara);
+  border: 1px solid var(--erro-borda);
+  border-radius: var(--raio);
+  color: var(--erro-escura);
+  font-size: var(--tipo-md);
+}
+
+/* --- splash: cartão de recomendação e rodapé ---------------------------
+   Altura reservada desde o estado vazio: sem isso a página salta quando a
+   recomendação chega, e o salto acontece embaixo do ponteiro. */
+.splash-cartao {
+  inline-size: min(100%, var(--largura-leitura-curta));
+  min-block-size: var(--esp-12);
+  padding: var(--esp-5);
+  text-align: start;
+}
+
+.splash-rodape {
+  position: absolute;
+  inset-block-end: var(--esp-6);
+  inset-inline: 0;
+  display: flex;
+  justify-content: center;
+}
+
+/* --- catálogo ----------------------------------------------------------- */
+.catalogo-link {
+  display: block;
+  padding: var(--esp-3) var(--esp-4);
+  border-radius: var(--raio-sm);
+  color: var(--texto-suave);
+  text-decoration: none;
+  font-size: var(--tipo-base);
+  white-space: nowrap;
+}
+
+.catalogo-link:hover {
+  background: var(--neutro-clara);
+  color: var(--texto);
+}
+
+.catalogo-link[aria-current='page'] {
+  background: var(--acao-clara);
+  color: var(--acao-escura);
+  font-weight: var(--peso-forte);
+}
+
+.barra-controles {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-elevado);
+  background: var(--fundo);
+  padding-block: var(--esp-3);
+  border-bottom: 1px solid var(--borda);
+}
+
+.controle-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-size: var(--tipo-sm);
+  color: var(--texto-suave);
+}
+
+.controle-inline select {
+  inline-size: auto;
+  block-size: var(--altura-controle-sm);
+  padding-block: 0;
+  font-size: var(--tipo-sm);
+}
+
+.amostra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+  font-size: var(--tipo-sm);
+  color: var(--texto-suave);
+}
+
+.amostra-cor {
+  block-size: var(--esp-9);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-sm);
+}
+
+.amostra-caixa {
+  background: var(--acao-clara);
+  border: 1px solid var(--acao-borda);
+  border-radius: var(--raio-xs);
+}
+
+/* ===========================================================================
+   9 · Peças da aba Gerar
+   ---------------------------------------------------------------------------
+   Árvore da hierarquia (1→N de campanha para grupos e de grupo para
+   anúncios), anexo de rótulo do campo opcional (D-011) e laudo do validador
+   de UTM (D-012). Nada de valor literal; nada de margem externa.
+   =========================================================================== */
+
+/* Preenchimento interno de um `.card` usado como seção de formulário. O
+   `.card` sozinho não tem padding, e cada tela vinha resolvendo isso com
+   `style` inline. */
+.bloco {
+  padding: var(--esp-6);
+}
+
+.texto-auxiliar {
+  font-size: var(--tipo-sm);
+  color: var(--texto-suave);
+}
+
+.texto-auxiliar[data-tom='alerta'] { color: var(--alerta); }
+
+/* A nomenclatura gerada: é o produto, então é o item mais pesado do bloco. */
+.nomenclatura {
+  flex: 1;
+  min-inline-size: 0;
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-lg);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+  word-break: break-all;
+}
+
+/* --- painel de nível -----------------------------------------------------
+   O painel bloqueado não usa `opacity`: atenuar o bloco inteiro derruba o
+   texto abaixo de 4.5:1, a mesma armadilha já registrada no cartão
+   "Em breve". A atenuação é a superfície e a cor do texto auxiliar. */
+.card[data-bloqueado] {
+  background: var(--fundo);
+  box-shadow: none;
+}
+
+.painel-titulo {
+  font-size: var(--tipo-lg);
+}
+
+.painel-salvo {
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-sm);
+  color: var(--ok-escura);
+  word-break: break-all;
+}
+
+/* Grade de campos: o gap do `.grade` é o de cartão, largo demais para um
+   formulário denso. O nome interno ocupa a linha toda. */
+.grade.campos {
+  gap: var(--esp-4);
+}
+
+.campo-largo {
+  grid-column: 1 / -1;
+}
+
+/* --- campo dinâmico ------------------------------------------------------
+   O anexo do rótulo (`· opcional`, contador de caracteres) volta ao peso
+   normal, para não competir com o rótulo em si. */
+.rotulo-anexo {
+  font-weight: var(--peso-normal);
+  color: var(--texto-fraco);
+}
+
+.rotulo-anexo[data-tom='alerta'] { color: var(--alerta); }
+.rotulo-anexo[data-tom='erro'] { color: var(--erro); }
+
+/* D-011: o que acontece se o campo opcional ficar em branco. Fica abaixo do
+   controle e é apontado por aria-describedby — sufixo de rótulo mais longo
+   viraria uma linha ilegível de tão comprida. */
+.dica-campo {
+  margin: var(--esp-1) 0 0;
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+}
+
+/* --- árvore da hierarquia ------------------------------------------------
+   Sem ações de editar ou excluir nomenclatura, aqui ou em qualquer lugar:
+   taxonomia é imutável (D-004), e o caminho de correção é regerar. */
+.arvore-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-4);
+}
+
+/* Os anúncios são filhos visuais do grupo: recuo mais fio vertical, que é o
+   que comunica pertencimento sem virar um explorador de arquivos. */
+.arvore-lista[data-nivel='anuncio'] {
+  gap: var(--esp-2);
+  margin-block-start: var(--esp-2);
+  margin-inline-start: var(--esp-3);
+  padding-inline-start: var(--esp-5);
+  border-inline-start: 1px solid var(--borda);
+}
+
+.arvore-nome {
+  font-size: var(--tipo-md);
+  font-weight: var(--peso-medio);
+  color: var(--texto);
+}
+
+.arvore-codigo {
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+}
+
+.arvore-nomenclatura {
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+  word-break: break-all;
+}
+
+/* --- laudo de UTM --------------------------------------------------------
+   Erro e aviso são blocos separados de propósito: erro é dado que chega
+   errado, aviso é o que funciona mas envelhece mal. Misturar os dois numa
+   lista só apaga justamente a distinção que o laudo existe para fazer. */
+.laudo {
+  padding: var(--esp-4) var(--esp-5);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--fundo);
+}
+
+.laudo[data-tipo='erro'] {
+  background: var(--erro-clara);
+  border-color: var(--erro-borda);
+}
+
+.laudo[data-tipo='aviso'] {
+  background: var(--alerta-clara);
+  border-color: var(--alerta-borda);
+}
+
+.laudo[data-tipo='ok'] {
+  background: var(--ok-clara);
+  border-color: var(--ok-borda);
+}
+
+.laudo-titulo {
+  font-size: var(--tipo-md);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+}
+
+.laudo[data-tipo='erro'] .laudo-titulo { color: var(--erro-escura); }
+.laudo[data-tipo='aviso'] .laudo-titulo { color: var(--alerta); }
+.laudo[data-tipo='ok'] .laudo-titulo { color: var(--ok-escura); }
+
+.laudo-lista {
+  list-style: none;
+  margin: var(--esp-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+}
+
+.laudo-item {
+  font-size: var(--tipo-md);
+  color: var(--texto);
+  line-height: var(--entrelinha);
+}
+
+.laudo-detalhe {
+  display: block;
+  margin-block-start: var(--esp-1);
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+  word-break: break-all;
+}
+
+/* Parâmetros lidos da URL: chave e valor lado a lado enquanto couber. */
+.parametros {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--esp-1) var(--esp-4);
+  margin: 0;
+  font-size: var(--tipo-md);
+}
+
+.parametros dt {
+  font-family: var(--fonte-mono);
+  color: var(--texto-suave);
+}
+
+.parametros dd {
+  margin: 0;
+  font-family: var(--fonte-mono);
+  word-break: break-all;
+}
+
+/* ===========================================================================
+   9b · Alternador de tema — controle segmentado sobre rádios nativos
+   ---------------------------------------------------------------------------
+   O rádio está escondido por `.apenas-leitor` no TSX, não aqui: quem pinta é
+   o `<label>` irmão. Toda a acessibilidade (um Tab para o grupo, setas entre
+   as opções, estado lido) vem do controle nativo — este bloco só cuida da
+   aparência e de devolver o foco visível ao rótulo, já que o elemento que o
+   recebe está fora da tela.
+   =========================================================================== */
+
+.alternador-tema {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  /* `fieldset` chega com borda, padding e margem do UA. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+.alternador-tema-rotulo {
+  padding: 0;
+  font-size: var(--tipo-xs);
+  font-weight: var(--peso-forte);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-rotulo);
+  color: var(--texto-suave);
+}
+
+/* Peça única com traço externo: os três estados são mutuamente exclusivos, e
+   uma moldura só é o que comunica isso — três botões soltos leriam como três
+   ações independentes. */
+.alternador-tema-opcoes {
+  display: inline-flex;
+  padding: var(--esp-1);
+  gap: var(--esp-1);
+  background: var(--fundo);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-sm);
+}
+
+.alternador-tema-opcao {
+  display: inline-flex;
+  position: relative;
+}
+
+.alternador-tema-opcao label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  block-size: var(--altura-controle-sm);
+  padding-inline: var(--esp-4);
+  margin: 0;
+  border-radius: var(--raio-xs);
+  font-size: var(--tipo-sm);
+  font-weight: var(--peso-medio);
+  color: var(--texto-suave);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-rapida) var(--curva-padrao),
+    color var(--dur-rapida) var(--curva-padrao);
+}
+
+.alternador-tema[data-tamanho='sm'] .alternador-tema-opcao label {
+  block-size: var(--altura-controle-sm);
+  padding-inline: var(--esp-3);
+  font-size: var(--tipo-xs);
+}
+
+.alternador-tema-opcao label:hover {
+  color: var(--texto);
+  background: var(--neutro-clara);
+}
+
+/* Selecionado: superfície de ação, como a aba ativa e o link `aria-current`.
+   O sistema já usa esse par em todo lugar em que "este é o ativo". */
+.alternador-tema-opcao input:checked + label {
+  background: var(--acao-clara);
+  color: var(--acao-escura);
+  font-weight: var(--peso-forte);
+}
+
+/* O foco chega no input, que está fora da tela — sem isto, o teclado
+   navegaria pelas três opções sem marca nenhuma (WCAG 2.4.7). */
+.alternador-tema-opcao input:focus-visible + label {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+  box-shadow: var(--halo-foco);
+}
+
+@media (forced-colors: active) {
+  .alternador-tema-opcao input:checked + label {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}
+
+/* ===========================================================================
+   10 · Iconografia
+   ---------------------------------------------------------------------------
+   Toda a aparência dos SVGs de `componentes/icones.tsx` mora aqui: o .tsx só
+   carrega geometria (path/rect/circle) e atributos de identificação.
+
+   Por que a cor vem do CSS e não de `fill=`: `fill="var(--logo-meta)"` não
+   resolve — presentation attribute não aceita var(). E hexadecimal literal
+   dentro do .tsx é proibido pelo sistema. Então cada peça declara `data-tinta`
+   e o CSS pinta.
+
+   Tamanho: `1em` por padrão. O ícone acompanha o texto ao lado, inclusive
+   quando o usuário aumenta a fonte do navegador — por isso em, não px.
+   =========================================================================== */
+
+.icone,
+.logo-plataforma {
+  /* `inline-size`/`block-size` e não width/height: o SVG participa do fluxo
+     lógico como qualquer outra caixa do sistema. */
+  inline-size: 1em;
+  block-size: 1em;
+  /* Não encolhe dentro de .linha/.botao: ícone espremido lê como defeito. */
+  flex: none;
+  /* Alinha o centro óptico do glifo com a linha de base do texto irmão. */
+  vertical-align: -0.145em;
+}
+
+.icone[data-tamanho='sm'],
+.logo-plataforma[data-tamanho='sm'] {
+  inline-size: var(--icone-sm);
+  block-size: var(--icone-sm);
+}
+
+.icone[data-tamanho='md'],
+.logo-plataforma[data-tamanho='md'] {
+  inline-size: var(--icone-md);
+  block-size: var(--icone-md);
+}
+
+.icone[data-tamanho='lg'],
+.logo-plataforma[data-tamanho='lg'] {
+  inline-size: var(--icone-lg);
+  block-size: var(--icone-lg);
+}
+
+.icone[data-tamanho='xl'],
+.logo-plataforma[data-tamanho='xl'] {
+  inline-size: var(--icone-xl);
+  block-size: var(--icone-xl);
+}
+
+.icone[data-tamanho='2xl'],
+.logo-plataforma[data-tamanho='2xl'] {
+  inline-size: var(--icone-2xl);
+  block-size: var(--icone-2xl);
+}
+
+/* --- família de traço (níveis + interface) -------------------------------
+   Um peso só para a família inteira. 1.75 na grade de 24 é o que mantém o
+   glifo legível a 16px sem fechar os vãos internos — mais fino some, mais
+   grosso empasta o megafone e a nota de imagem do anúncio. */
+.icone {
+  --icone-traco: 1.75;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--icone-traco);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Chevron: um desenho só, quatro direções por rotação. A transição existe
+   para o par recolher/expandir — é revelação, não enfeite, e cabe na faixa
+   de estado (140ms). */
+.icone[data-sentido] {
+  transition: transform var(--dur-rapida) var(--curva-padrao);
+}
+
+.icone[data-sentido='cima'] { transform: rotate(180deg); }
+.icone[data-sentido='esquerda'] { transform: rotate(90deg); }
+.icone[data-sentido='direita'] { transform: rotate(-90deg); }
+
+/* --- logos de plataforma -------------------------------------------------
+   `color` é o veículo da tinta e `fill: currentColor` a consome: assim o modo
+   monocromático é uma linha (`color: inherit`) em vez de uma tabela paralela
+   de regras. */
+.logo-parte {
+  color: var(--logo-tinta, currentColor);
+  fill: currentColor;
+  stroke: none;
+}
+
+.logo-parte[data-tinta='meta'] { --logo-tinta: var(--logo-meta); }
+.logo-parte[data-tinta='google-azul'] { --logo-tinta: var(--logo-google-azul); }
+.logo-parte[data-tinta='google-vermelho'] { --logo-tinta: var(--logo-google-vermelho); }
+.logo-parte[data-tinta='google-amarelo'] { --logo-tinta: var(--logo-google-amarelo); }
+.logo-parte[data-tinta='google-verde'] { --logo-tinta: var(--logo-google-verde); }
+.logo-parte[data-tinta='tiktok-ciano'] { --logo-tinta: var(--logo-tiktok-ciano); }
+.logo-parte[data-tinta='tiktok-rosa'] { --logo-tinta: var(--logo-tiktok-rosa); }
+.logo-parte[data-tinta='tiktok-tinta'] { --logo-tinta: var(--logo-tiktok-tinta); }
+.logo-parte[data-tinta='dv360-1'] { --logo-tinta: var(--logo-dv360-1); }
+.logo-parte[data-tinta='dv360-2'] { --logo-tinta: var(--logo-dv360-2); }
+
+/* Peças de traço. Vêm depois das de tinta de propósito: precisam ganhar o
+   `fill` na cascata (mesma especificidade, quem vem depois vence). */
+.logo-parte[data-forma='traco'] {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Anel do G: ponta reta, porque a barra horizontal encosta nela. Arredondar
+   aqui criaria uma saliência exatamente na emenda. */
+.logo-parte[data-forma='anel'] {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 4;
+}
+
+.logo-parte[data-forma='anel-fino'] {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.2;
+}
+
+/* Modo monocromático: o logo inteiro herda a cor do texto. Para árvore da
+   campanha, listas densas e qualquer lugar em que quatro marcas coloridas
+   lado a lado competiriam com o dado. */
+.logo-plataforma[data-mono='true'] .logo-parte {
+  color: inherit;
+}
+
+/* Os ecos ciano/rosa da TikTok só fazem sentido coloridos: na mesma tinta
+   viram três cópias empilhadas, e o glifo engorda em vez de aparecer. */
+.logo-plataforma[data-mono='true'] .logo-eco {
+  display: none;
+}
+
+/* Placa de reserva — sigla que não tem logo desenhado. Cor de produto, não de
+   marca: é uma caixa do sistema, não uma identidade de terceiro. */
+.logo-placa {
+  fill: var(--neutro-clara);
+  stroke: var(--borda-forte);
+  stroke-width: 1;
+}
+
+.logo-iniciais {
+  fill: var(--texto-suave);
+  font-family: var(--fonte-ui);
+  /* Unidades do viewBox 24×24, não px de tela: escala junto com o SVG. */
+  font-size: 9px;
+  font-weight: var(--peso-forte);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.logo-plataforma[data-mono='true'] .logo-placa {
+  fill: none;
+  stroke: currentColor;
+}
+
+.logo-plataforma[data-mono='true'] .logo-iniciais {
+  fill: currentColor;
+}
+
+/* Alto contraste do sistema: cor de marca é justamente o que o modo forçado
+   descarta. Deixar o logo herdar a cor do texto é o comportamento correto —
+   melhor um glifo legível que uma marca fiel invisível. */
+@media (forced-colors: active) {
+  .logo-plataforma .logo-parte {
+    color: inherit;
+  }
+
+  .logo-plataforma .logo-eco {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+   Menu de conta (barra de topo)
+   ---------------------------------------------------------------------------
+   Popover ancorado à direita do gatilho. Abre para DENTRO da tela nas duas
+   pontas: o painel é posicionado pelo fim (`inset-inline-end: 0`) porque o
+   gatilho é o último item da barra, e ganha teto de altura com rolagem
+   própria para nunca ultrapassar a janela num monitor curto.
+   =========================================================================== */
+
+.menu-conta {
+  position: relative;
+  display: inline-flex;
+}
+
+.menu-conta-gatilho {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  block-size: var(--altura-controle);
+  padding-inline: var(--esp-3);
+  border: 1px solid transparent;
+  border-radius: var(--raio-pilula);
+  background: transparent;
+  color: var(--texto-suave);
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-medio);
+  white-space: nowrap;
+}
+
+.menu-conta-gatilho:hover:not(:disabled) {
+  background: var(--neutro-clara);
+  color: var(--texto);
+}
+
+.menu-conta-gatilho[aria-expanded='true'] {
+  background: var(--neutro-clara);
+  color: var(--texto);
+  border-color: var(--borda-forte);
+}
+
+.menu-conta-nome {
+  max-inline-size: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-conta-painel {
+  position: absolute;
+  inset-block-start: calc(100% + var(--esp-2));
+  inset-inline-end: 0;
+  z-index: var(--z-cabecalho);
+  inline-size: max-content;
+  min-inline-size: 15rem;
+  max-inline-size: min(22rem, 90vw);
+  max-block-size: 70vh;
+  overflow-y: auto;
+  padding: var(--esp-5);
+  box-shadow: var(--sombra-lg);
+  text-align: start;
+}
+
+.menu-conta-identidade {
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+}
+
+.menu-conta-divisor {
+  inline-size: 100%;
+  block-size: 0;
+  margin: 0;
+  border: 0;
+  border-block-start: 1px solid var(--borda);
+}
+
+/* Itens do menu — link e botão com a mesma métrica. Alvo de 44px: é o que a
+   §5.5 pede para `Sair`, e não faz sentido só ele ser maior. */
+.menu-conta-item {
+  display: flex;
+  align-items: center;
+  inline-size: 100%;
+  min-block-size: var(--altura-controle-lg);
+  padding-inline: var(--esp-3);
+  border: 1px solid transparent;
+  border-radius: var(--raio-sm);
+  background: transparent;
+  color: var(--texto);
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-medio);
+  text-align: start;
+  text-decoration: none;
+}
+
+.menu-conta-item:hover {
+  background: var(--neutro-clara);
+}
+
+.menu-conta-sair {
+  color: var(--texto);
+}
+
+/* ===========================================================================
+   Diálogo modal nativo
+   ---------------------------------------------------------------------------
+   `<dialog>` + `showModal()`: o fundo, o trap de foco e o `inert` do resto da
+   página vêm do navegador. O que o CSS faz é só a superfície.
+   =========================================================================== */
+
+.dialogo {
+  inline-size: min(28rem, calc(100vw - var(--esp-8)));
+  padding: var(--esp-7);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-lg);
+  background: var(--card);
+  color: var(--texto);
+  box-shadow: var(--sombra-lg);
+}
+
+.dialogo::backdrop {
+  background: var(--sobreposicao);
+}
+
+/* Campo de senha com o botão de revelar ao lado. O botão fica FORA do input
+   (não sobreposto): sobreposto, ele cobre o texto no zoom de 200%. */
+.campo-senha {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.campo-senha > input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}

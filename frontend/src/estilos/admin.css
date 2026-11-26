@@ -1,0 +1,285 @@
+/* ===========================================================================
+   MediaBuild · navegação hierárquica, área administrativa e densidade de dados
+   ---------------------------------------------------------------------------
+   Carrega por último: ajusta peças de `componentes.css` (`.tabela`, `.card`)
+   e introduz as classes da Parte II da UX-NAVEGACAO.
+
+   Sem @media para layout, como o resto do sistema — ver o topo de layout.css.
+   =========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1 · Voltar hierárquico (§2.2)
+   Alvo ≥ 44px de área clicável por FREQUÊNCIA (WCAG 2.5.8 pede 24). Métrica
+   de botão fantasma sm, mas com altura de alvo grande: ele não compete em
+   peso visual com a ação primária, e ainda assim é fácil de acertar.
+   --------------------------------------------------------------------------- */
+.voltar-para {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  align-self: flex-start;
+  min-block-size: var(--altura-controle-lg);
+  padding-inline: var(--esp-3);
+  margin-inline-start: calc(var(--esp-3) * -1);
+  border-radius: var(--raio-sm);
+  color: var(--texto-suave);
+  font-size: var(--tipo-md);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.voltar-para:hover {
+  background: var(--neutro-clara);
+  color: var(--texto);
+}
+
+/* ---------------------------------------------------------------------------
+   2 · Faixa de contexto do admin (§3.5)
+   UM sinal só, forte, e FORA do conteúdo. Superfície invertida, altura de uma
+   linha. Não se recolore a área: o catálogo de design existe para mostrar as
+   cores do produto, e repintar a casca faria o palco mentir. Não se usa cor
+   de estado: estar no admin não é erro nem risco.
+   --------------------------------------------------------------------------- */
+.faixa-admin {
+  background: var(--fundo-inverso);
+  color: var(--texto-inverso);
+  font-size: var(--tipo-sm);
+}
+
+.faixa-admin-interna {
+  max-width: var(--largura-densa);
+  margin-inline: auto;
+  padding: var(--esp-2) var(--esp-5);
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.faixa-admin-nota {
+  color: var(--texto-inverso-suave);
+}
+
+/* ---------------------------------------------------------------------------
+   3 · Nav secundária das três áreas (§3.4)
+   LINKS com aria-current, não role="tab": são telas distintas com URL própria,
+   e dois `tablist` aninhados (este + a nav lateral do catálogo) é ruído de
+   leitor de tela garantido.
+   --------------------------------------------------------------------------- */
+.nav-admin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  border-block-end: 1px solid var(--borda);
+}
+
+.nav-admin-link {
+  padding: var(--esp-3) var(--esp-4);
+  margin-block-end: -1px;
+  border-block-end: 2px solid transparent;
+  color: var(--texto-suave);
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-medio);
+  text-decoration: none;
+}
+
+.nav-admin-link:hover {
+  color: var(--texto);
+}
+
+.nav-admin-link[aria-current='page'] {
+  color: var(--acao);
+  border-block-end-color: var(--acao);
+}
+
+/* ---------------------------------------------------------------------------
+   4 · Linha de filtros SEM cartão (§7.3)
+   O cartão de filtros e o `<h2>Filtros` saíram: os rótulos dos campos já dizem
+   o que são, e o cartão custava ~120px verticais — que é altura de tabela.
+   --------------------------------------------------------------------------- */
+.filtros {
+  display: grid;
+  gap: var(--esp-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  align-items: end;
+}
+
+.filtros-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-4);
+}
+
+/* ---------------------------------------------------------------------------
+   5 · Densidade de tabela (§7.3)
+   Meta OBSERVÁVEL: ≥18 linhas visíveis sem rolar em 1920×1080. O número é o
+   critério de aceite; isto aqui é só a tentativa de alcançá-lo.
+   --------------------------------------------------------------------------- */
+.tabela[data-densidade='alta'] .tabela-celula {
+  padding: var(--esp-2) var(--esp-3);
+  vertical-align: middle;
+}
+
+/* A nomenclatura é o que se lê: fica com o 1fr e pode quebrar. As demais são
+   de largura de conteúdo e nunca quebram. */
+.tabela-celula[data-coluna='principal'] {
+  white-space: normal;
+  inline-size: 100%;
+}
+
+.tabela-celula[data-coluna='acao'] {
+  inline-size: 1%;
+  text-align: end;
+}
+
+.tabela-nota {
+  font-size: var(--tipo-xs);
+  font-weight: var(--peso-normal);
+  color: var(--texto-fraco);
+}
+
+/* ---------------------------------------------------------------------------
+   6 · Busca local (§6.6)
+   Mora no cabeçalho da SEÇÃO DA LISTA, nunca perto do formulário de criação:
+   misturar filtro com criação é o erro de agrupamento clássico.
+   --------------------------------------------------------------------------- */
+.campo-busca {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.campo-busca > input {
+  flex: 1 1 18ch;
+  min-inline-size: 0;
+}
+
+.cabecalho-lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--esp-3);
+}
+
+.contador-lista {
+  font-size: var(--tipo-sm);
+  font-weight: var(--peso-normal);
+  color: var(--texto-fraco);
+}
+
+/* ---------------------------------------------------------------------------
+   7 · Monitoramento (§3.7)
+   Três números e duas tabelas respondem à pergunta. A barra de logins por dia
+   é SVG inline com os tokens do projeto — sem biblioteca, e sem gráfico onde
+   um número basta.
+   --------------------------------------------------------------------------- */
+.cartoes-numero {
+  display: grid;
+  gap: var(--esp-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.cartao-numero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  padding: var(--esp-5);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--card);
+}
+
+.cartao-numero-valor {
+  font-size: var(--tipo-2xl);
+  font-weight: var(--peso-forte);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.cartao-numero-rotulo {
+  font-size: var(--tipo-sm);
+  color: var(--texto-suave);
+}
+
+/* Seletor de período: um grupo de rádios com aparência de segmentos. Rádio, e
+   não três botões, porque a escolha é EXCLUDENTE e o teclado já sabe percorrer
+   um radiogroup com as setas. */
+.segmentos {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--esp-1);
+  padding: var(--esp-1);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-pilula);
+  background: var(--card);
+}
+
+.segmento label {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--altura-controle);
+  padding-inline: var(--esp-4);
+  border-radius: var(--raio-pilula);
+  color: var(--texto-suave);
+  font-size: var(--tipo-md);
+  font-weight: var(--peso-medio);
+  cursor: pointer;
+  margin-bottom: 0;
+}
+
+.segmento label:hover {
+  background: var(--neutro-clara);
+}
+
+/* Mesmo par de "este é o ativo" usado pela aba e pelo alternador de tema. */
+.segmento input:checked + label {
+  background: var(--acao-clara);
+  color: var(--acao-escura);
+  font-weight: var(--peso-forte);
+}
+
+.segmento input:focus-visible + label {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+}
+
+/* ---------------------------------------------------------------------------
+   8 · Senha provisória (§3.6)
+   Exibida UMA vez e não recuperável. O bloco é monoespaçado e selecionável;
+   o aviso é parte do bloco, não uma nota de rodapé que se perde.
+   --------------------------------------------------------------------------- */
+.senha-provisoria {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-4);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-sm);
+  background: var(--neutro-clara);
+}
+
+.senha-provisoria code {
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-lg);
+  font-weight: var(--peso-forte);
+  user-select: all;
+}
+
+/* Excluir é a única ação verdadeiramente destrutiva do produto: fica por
+   último no menu, separado, e é o único item em cor de erro. */
+.menu-acao-perigo {
+  color: var(--erro);
+}
+
+.menu-acao-perigo:disabled {
+  color: var(--texto-fraco);
+  cursor: not-allowed;
+}
+
+/* Diálogo mais largo para os formulários de acesso, que têm quatro campos. */
+.dialogo[data-tamanho='lg'] {
+  inline-size: min(34rem, calc(100vw - var(--esp-8)));
+}

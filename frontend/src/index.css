@@ -1,0 +1,775 @@
+/* ===========================================================================
+   MediaBuild · camada de tokens
+   ---------------------------------------------------------------------------
+   Fonte única do sistema visual. Nenhum componente deve conter valor literal
+   de cor, raio, sombra, espaçamento, tipografia ou duração — tudo sai daqui.
+
+   DUAS CAMADAS DE COR, e só uma delas é pública:
+
+     1. PRIMITIVAS (`--paleta-*`) — a paleta crua, sem significado. Elas não
+        mudam com o tema e NENHUM outro arquivo pode referenciá-las. Se um
+        `var(--paleta-…)` aparecer fora deste arquivo, é bug: o consumidor
+        acabou de amarrar um componente a uma cor em vez de a um papel.
+     2. SEMÂNTICAS (`--fundo`, `--texto`, `--acao`, `--erro`…) — o papel. É a
+        única camada que o resto do CSS enxerga, e é a camada inteira que o
+        tema escuro reescreve. Nenhum componente sabe qual tema está ativo.
+
+   Os nomes semânticos são os que já existiam (`--fundo`/`--card`/`--texto`/
+   `--acao`…) e não foram renomeados para `--cor-*` de propósito: `Dicionario.
+   tsx` e `Historico.tsx` ainda carregam `var(--texto-suave)`/`var(--card)` em
+   `style` inline (dívida conhecida, sinalizada em docs/PLANO-DE-MIDIA-UI.md
+   §7). Renomear a camada semântica quebraria essas telas em silêncio, e o
+   ganho seria só cosmético — o contrato "componente consome papel, nunca
+   literal" já está satisfeito.
+
+   Tema claro da spec (docs/ESPECIFICACAO.md, seção 4).
+   Cor de ação: azul #2563EB, confirmada com o usuário em 01/08/2026 — ela
+   continua sendo a identidade, e o tema escuro não a troca: clareia (o mesmo
+   azul sobre superfície escura dá 3.3:1 e reprova AA como texto).
+   =========================================================================== */
+
+/* ===========================================================================
+   1 · PRIMITIVAS — a paleta crua. Não usar fora deste arquivo.
+   ---------------------------------------------------------------------------
+   Rampas neutras e de matiz em degraus fixos. O sufixo é claridade: 0 é o
+   mais claro, 950 o mais escuro, no claro E no escuro. É o mapeamento
+   semântico que inverte, não a rampa.
+   =========================================================================== */
+:root {
+  --paleta-neutra-0: #ffffff;
+  --paleta-neutra-25: #f8f9fa;
+  --paleta-neutra-50: #f3f4f6;
+  --paleta-neutra-100: #e5e7eb;
+  --paleta-neutra-200: #d1d5db;
+  --paleta-neutra-300: #9ca3af;
+  --paleta-neutra-350: #868e9e;
+  --paleta-neutra-400: #6b7280;
+  --paleta-neutra-500: #5b6270;
+  --paleta-neutra-600: #4b5563;
+  --paleta-neutra-700: #374151;
+  --paleta-neutra-800: #1f2937;
+
+  /* Rampa fria: é a escada de superfície do tema escuro e, desde antes dele,
+     a superfície de marca da splash e da barra de preview. */
+  --paleta-fria-100: #f8fafc;
+  --paleta-fria-200: #d7deea;
+  --paleta-fria-300: #b3bed3;
+  --paleta-fria-400: #a3adc2;
+  --paleta-fria-450: #9aa6bd;
+  --paleta-fria-500: #94a1ba;
+  --paleta-fria-600: #5a6a8c;
+  --paleta-fria-700: #3d4a6b;
+  --paleta-fria-750: #2b3654;
+  --paleta-fria-800: #26304a;
+  --paleta-fria-850: #1e2637;
+  --paleta-fria-900: #151b2b;
+  --paleta-fria-950: #0b0f19;
+  --paleta-fria-1000: #05070c;
+
+  --paleta-azul-50: #eff6ff;
+  --paleta-azul-200: #bfdbfe;
+  --paleta-azul-300: #93c5fd;
+  --paleta-azul-400: #60a5fa;
+  --paleta-azul-600: #2563eb;
+  --paleta-azul-700: #1d4ed8;
+  --paleta-azul-900: #1e3a8a;
+  --paleta-azul-950: #172554;
+
+  --paleta-verde-50: #f0fdf4;
+  --paleta-verde-200: #bbf7d0;
+  --paleta-verde-300: #86efac;
+  --paleta-verde-400: #4ade80;
+  --paleta-verde-600: #16a34a;
+  --paleta-verde-700: #15803d;
+  --paleta-verde-800: #166534;
+  --paleta-verde-950: #052e16;
+
+  --paleta-vermelha-50: #fef2f2;
+  --paleta-vermelha-200: #fecaca;
+  --paleta-vermelha-300: #fca5a5;
+  --paleta-vermelha-400: #f87171;
+  --paleta-vermelha-600: #dc2626;
+  --paleta-vermelha-700: #b91c1c;
+  --paleta-vermelha-900: #7f1d1d;
+  --paleta-vermelha-950: #450a0a;
+
+  --paleta-ambar-50: #fffbeb;
+  --paleta-ambar-200: #fde68a;
+  --paleta-ambar-400: #fbbf24;
+  --paleta-ambar-700: #b45309;
+  --paleta-ambar-900: #78350f;
+  --paleta-ambar-950: #3a1e03;
+
+  /* Matizes decorativos da marca (a marca quicante da splash). */
+  --paleta-violeta-400: #a78bfa;
+  --paleta-violeta-600: #7c3aed;
+  --paleta-turquesa-400: #2dd4bf;
+  --paleta-turquesa-700: #0f766e;
+  --paleta-magenta-400: #f472b6;
+  --paleta-magenta-700: #be185d;
+}
+
+/* ===========================================================================
+   2 · SEMÂNTICAS — tema CLARO (o padrão)
+   ---------------------------------------------------------------------------
+   O seletor cobre três casos:
+     `:root`                    — sem JS nenhum, o produto abre no claro;
+     `[data-aparencia='claro']` — o tema RESOLVIDO, escrito por `src/tema.ts`
+                                  no <html> antes do primeiro paint;
+     `[data-tema='claro']`      — a ESCOLHA do usuário, também no <html>; e,
+                                  em qualquer elemento, um subárvore forçada
+                                  no claro (é assim que o catálogo consegue
+                                  mostrar as duas paletas lado a lado).
+
+   Por que a resolução de `prefers-color-scheme` mora no JS e não num
+   `@media (prefers-color-scheme: dark)`: duplicar as ~50 linhas do bloco
+   escuro em duas regras é a receita para as duas divergirem na primeira
+   manutenção. O script inline do index.html roda antes do primeiro paint,
+   então não há flash — e sem JS o produto cai no claro, que é exatamente o
+   estado que o usuário já aprovou.
+   =========================================================================== */
+:root,
+[data-aparencia='claro'],
+[data-tema='claro'] {
+  color-scheme: light;
+  color: var(--texto);
+
+  /* --- superfícies e traços ------------------------------------------- */
+  --fundo: var(--paleta-neutra-25);
+  --card: var(--paleta-neutra-0);
+  --borda: var(--paleta-neutra-100);
+  /* 3.29:1 no --card e 3.12:1 no --fundo. Era #d1d5db (1.47:1), que é a borda
+     visível de TODO input e select: reprovava WCAG 1.4.11 (contraste de
+     componente de interface exige 3:1). Escurecer aqui muda a aparência do
+     tema claro — é correção de acessibilidade, não gosto. */
+  --borda-forte: var(--paleta-neutra-350);
+
+  /* Superfície escura invertida. Não é o tema escuro: é a superfície de marca
+     (barra de preview) que existe DENTRO do tema claro. No escuro ela também
+     existe, um degrau ABAIXO do fundo — ver o bloco do tema escuro. */
+  --fundo-inverso: var(--paleta-fria-950);
+  --card-inverso: var(--paleta-fria-900);
+  --borda-inversa: var(--paleta-fria-800);
+  --texto-inverso: var(--paleta-fria-100);
+  --texto-inverso-suave: var(--paleta-fria-400);
+
+  /* --- texto ----------------------------------------------------------- */
+  --texto: var(--paleta-neutra-800); /* 13.93:1 no --fundo */
+  --texto-suave: var(--paleta-neutra-500); /* 6.13:1 no --card · 5.82:1 no --fundo */
+  /* Era #9ca3af (2.54:1 no --card): reprovava WCAG 1.4.3 e estava em uso como
+     TEXTO em Preview, Gerador, PainelNivel, Dicionario e Historico. Novo valor
+     passa AA nas duas superfícies e mantém dois degraus visíveis de hierarquia. */
+  --texto-fraco: var(--paleta-neutra-400); /* 4.83:1 no --card · 4.59:1 no --fundo */
+
+  /* Texto SOBRE uma superfície preenchida com cor de estado (botão primário,
+     botão de perigo). Existia como `#fff` literal em dois lugares; no escuro
+     precisa virar tinta escura, porque lá o preenchimento é claro. */
+  --texto-em-preenchimento: var(--paleta-neutra-0);
+
+  /* --- papéis semânticos ----------------------------------------------- */
+  --acao: var(--paleta-azul-600);
+  --acao-escura: var(--paleta-azul-700); /* ênfase: hover, link ativo */
+  --acao-clara: var(--paleta-azul-50); /* superfície tingida */
+  --acao-borda: var(--paleta-azul-200);
+
+  --ok: var(--paleta-verde-600); /* 3.30:1 — preenchimento e ícone, não texto pequeno */
+  --ok-escura: var(--paleta-verde-700); /* 5.02:1 — esta é a cor de texto de sucesso */
+  --ok-clara: var(--paleta-verde-50);
+  --ok-borda: var(--paleta-verde-200);
+
+  --erro: var(--paleta-vermelha-600); /* 4.83:1 — pode ser texto */
+  --erro-escura: var(--paleta-vermelha-700);
+  --erro-clara: var(--paleta-vermelha-50);
+  --erro-borda: var(--paleta-vermelha-200);
+
+  --alerta: var(--paleta-ambar-700); /* 5.02:1 — pode ser texto */
+  --alerta-clara: var(--paleta-ambar-50);
+  --alerta-borda: var(--paleta-ambar-200);
+
+  --neutro-clara: var(--paleta-neutra-50);
+  --neutro-borda: var(--paleta-neutra-100);
+
+  --desabilitado-fundo: var(--paleta-neutra-100);
+  /* 4.95:1 sobre --desabilitado-fundo. Controle desabilitado é isento do
+     1.4.3, mas o rótulo ainda precisa ser LIDO para a pessoa saber o que está
+     indisponível — o valor anterior (#6b7280) dava 3.90:1. */
+  --desabilitado-texto: var(--paleta-neutra-500);
+
+  --sobreposicao: rgb(11 15 25 / 62%);
+
+  /* --- elevação (a tinta da sombra é do tema) ---------------------------- */
+  --sombra-sm: 0 1px 2px rgb(0 0 0 / 6%);
+  --sombra: 0 1px 3px rgb(0 0 0 / 8%);
+  --sombra-md: 0 4px 12px rgb(0 0 0 / 8%);
+  --sombra-lg: 0 12px 32px rgb(0 0 0 / 12%);
+  --sombra-simbolo: 0 0.125rem 0.5rem rgb(0 0 0 / 18%);
+
+  /* Intensidade do halo de foco e do brilho do esqueleto. No claro o halo é
+     um sopro; no escuro precisa de mais alfa para existir. */
+  --halo-foco-forca: 12%;
+  --esqueleto-brilho: rgb(255 255 255 / 70%);
+
+  /* --- paleta decorativa da marca --------------------------------------
+     Uso EXCLUSIVAMENTE decorativo (troca de cor a cada colisão da marca
+     quicante). Nenhuma delas carrega significado de estado — por isso não
+     reciclam --erro / --ok / --alerta. Contraste mínimo exigido 3:1 contra
+     --fundo: 5.41 / 5.19 / 5.73 / 9.83. Trocam por colisão (~1×/s), nunca
+     repetindo a anterior — longe do limite de 3 flashes/s do WCAG 2.3.1. */
+  --marca-1: var(--paleta-violeta-600);
+  --marca-2: var(--paleta-turquesa-700);
+  --marca-3: var(--paleta-magenta-700);
+  --marca-4: var(--paleta-azul-900);
+
+  /* Tinta do wordmark TikTok — preto de marca. Ver o bloco de cores de
+     terceiros mais abaixo. */
+  --logo-tiktok-tinta: #010101;
+}
+
+/* ===========================================================================
+   3 · SEMÂNTICAS — tema ESCURO
+   ---------------------------------------------------------------------------
+   Só papéis: nenhuma regra de componente muda entre os dois temas. Duas
+   inversões que valem registrar, porque o NOME parece dizer o contrário:
+
+   · `--*-escura` é a variante de ÊNFASE, não a mais escura em valor. No claro,
+     enfatizar é escurecer; no escuro, é clarear. O papel ("um degrau mais
+     forte que a cor base") é o mesmo, e é ele que o componente consome.
+   · `--*-clara` é a SUPERFÍCIE TINGIDA de um estado (fundo de selo, de laudo,
+     de aba ativa). No escuro ela é um tom profundo do mesmo matiz.
+
+   Contraste conferido par a par com `src/admin/design/contraste.ts`; os números nos
+   comentários são a medida, não estimativa. A seção `fundacao` do catálogo
+   recalcula tudo em tempo de execução, então um token errado aqui reprova lá.
+   =========================================================================== */
+[data-aparencia='escuro'],
+[data-tema='escuro'] {
+  color-scheme: dark;
+  color: var(--texto);
+
+  --fundo: var(--paleta-fria-950);
+  --card: var(--paleta-fria-900);
+  --borda: var(--paleta-fria-750);
+  --borda-forte: var(--paleta-fria-600); /* 3.17:1 no --card · 3.53:1 no --fundo */
+
+  /* A superfície de marca no escuro não pode ser "mais escura que o fundo por
+     pouco" — ela some. Vai para o degrau mais fundo da rampa e mantém a borda
+     como separação. */
+  --fundo-inverso: var(--paleta-fria-1000);
+  --card-inverso: var(--paleta-fria-1000);
+  --borda-inversa: var(--paleta-fria-800);
+  --texto-inverso: var(--paleta-fria-100);
+  --texto-inverso-suave: var(--paleta-fria-400);
+
+  --texto: #f1f5f9; /* 17.48:1 no --fundo · 15.67:1 no --card */
+  --texto-suave: var(--paleta-fria-300); /* 9.17:1 no --card */
+  --texto-fraco: var(--paleta-fria-500); /* 6.59:1 no --card */
+  --texto-em-preenchimento: var(--paleta-fria-950); /* 7.53:1 sobre --acao */
+
+  --acao: var(--paleta-azul-400); /* 6.75:1 no --card — o azul da marca clareado */
+  --acao-escura: var(--paleta-azul-300); /* 9.52:1 — ênfase = clarear */
+  --acao-clara: var(--paleta-azul-950);
+  --acao-borda: var(--paleta-azul-900);
+
+  --ok: var(--paleta-verde-400);
+  --ok-escura: var(--paleta-verde-300); /* 12.22:1 no --card */
+  --ok-clara: var(--paleta-verde-950);
+  --ok-borda: var(--paleta-verde-800);
+
+  --erro: var(--paleta-vermelha-400); /* 6.20:1 no --card */
+  --erro-escura: var(--paleta-vermelha-300); /* 8.51:1 sobre --erro-clara */
+  --erro-clara: var(--paleta-vermelha-950);
+  --erro-borda: var(--paleta-vermelha-900);
+
+  --alerta: var(--paleta-ambar-400); /* 10.28:1 no --card */
+  --alerta-clara: var(--paleta-ambar-950);
+  --alerta-borda: var(--paleta-ambar-900);
+
+  --neutro-clara: var(--paleta-fria-850);
+  --neutro-borda: var(--paleta-fria-800);
+
+  --desabilitado-fundo: var(--paleta-fria-800);
+  --desabilitado-texto: var(--paleta-fria-450); /* 5.34:1 sobre o fundo desabilitado */
+
+  --sobreposicao: rgb(2 4 8 / 72%);
+
+  /* Sombra no escuro não "clareia por baixo": ela escurece mais e o traço de
+     borda passa a ser o que separa a superfície. Alfa maior, mesma geometria. */
+  --sombra-sm: 0 1px 2px rgb(0 0 0 / 40%);
+  --sombra: 0 1px 3px rgb(0 0 0 / 46%);
+  --sombra-md: 0 4px 12px rgb(0 0 0 / 52%);
+  --sombra-lg: 0 12px 32px rgb(0 0 0 / 62%);
+  --sombra-simbolo: 0 0.125rem 0.5rem rgb(0 0 0 / 55%);
+
+  --halo-foco-forca: 30%;
+  /* O brilho branco a 70% vira um flash em superfície escura. */
+  --esqueleto-brilho: rgb(255 255 255 / 7%);
+
+  /* Decorativas, ≥3:1 contra o --fundo escuro: 7.04 / 10.29 / 7.23 / 10.62. */
+  --marca-1: var(--paleta-violeta-400);
+  --marca-2: var(--paleta-turquesa-400);
+  --marca-3: var(--paleta-magenta-400);
+  --marca-4: var(--paleta-azul-300);
+
+  /* Único desvio de fidelidade de marca no escuro: o preto do wordmark TikTok
+     é invisível sobre a superfície escura. Marca ilegível é pior que marca
+     aproximada — a mesma escolha já registrada no bloco de forced-colors. */
+  --logo-tiktok-tinta: var(--paleta-fria-100);
+}
+
+/* ===========================================================================
+   4 · Tokens independentes de tema
+   =========================================================================== */
+:root {
+  /* --- tipografia ------------------------------------------------------ */
+  --fonte-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fonte-mono: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  /* Ponto de troca da identidade: um woff2 auto-hospedado entra aqui e em
+     lugar nenhum mais. Enquanto não houver, a marca usa a pilha do sistema. */
+  --fonte-marca: var(--fonte-ui);
+
+  /* --- escala tipográfica FLUIDA ---------------------------------------
+     Escala fechada em degraus, mas cada degrau interpola entre um piso e um
+     teto conforme a largura do CONTÊINER — não da janela.
+
+     Por que `cqi` e não `vw`: é a mesma razão que proíbe `@media` neste
+     projeto (ver o topo de `estilos/layout.css`). Com `vw`, o texto dentro do
+     palco de 360px do catálogo renderizaria no tamanho de desktop e o
+     catálogo mentiria sobre o componente. Com `cqi`, o palco de 360px mostra
+     exatamente o tamanho que aquele componente teria num contêiner de 360px.
+
+     Como isso funciona apesar de os tokens serem declarados no `:root`:
+     custom property NÃO é resolvida onde é declarada, e sim onde é USADA. O
+     `clamp(...)` viaja como texto pela herança e só vira número quando cai num
+     `font-size` real — aí `cqi` mede o contêiner mais próximo DAQUELE
+     elemento. Por isso `body` declara `container: raiz / inline-size` (mais
+     abaixo): garante que sempre exista um contêiner e que a leitura padrão
+     seja a largura da página, nunca a janela.
+
+     Faixa de interpolação: contêiner de 480px (piso) a 1600px (teto).
+     O piso e o teto são em `rem`, então o zoom de texto do navegador continua
+     valendo (WCAG 1.4.4) — quem não escala com o zoom é só o termo `cqi`, que
+     é justamente o termo de "quanta tela sobra".
+
+     1rem = 15px (font-size do :root). Os px nos comentários são a 15px. */
+  --tipo-xs: clamp(0.767rem, 0.724rem + 0.134cqi, 0.867rem); /* 11.5→13px */
+  --tipo-sm: clamp(0.833rem, 0.79rem + 0.134cqi, 0.933rem); /* 12.5→14px */
+  --tipo-md: clamp(0.867rem, 0.81rem + 0.179cqi, 1rem); /* 13→15px */
+  --tipo-base: clamp(0.933rem, 0.862rem + 0.223cqi, 1.1rem); /* 14→16.5px */
+  --tipo-lg: clamp(1rem, 0.914rem + 0.268cqi, 1.2rem); /* 15→18px */
+  --tipo-xl: clamp(1.133rem, 1.019rem + 0.357cqi, 1.4rem); /* 17→21px */
+  --tipo-2xl: clamp(1.467rem, 1.238rem + 0.714cqi, 2rem); /* 22→30px */
+  --tipo-3xl: clamp(1.867rem, 1.467rem + 1.25cqi, 2.8rem); /* 28→42px */
+  --tipo-4xl: clamp(2.533rem, 1.905rem + 1.964cqi, 4rem); /* 38→60px */
+
+  --peso-normal: 400;
+  --peso-medio: 500;
+  --peso-forte: 600;
+  --peso-marca: 800;
+
+  --entrelinha-apertada: 1.15;
+  --entrelinha: 1.5;
+  --entrelinha-solta: 1.65;
+
+  --tracking-marca: -0.04em;
+  --tracking-legenda: 0.34em;
+  --tracking-rotulo: 0.05em;
+  --tracking-titulo: -0.01em; /* fechamento óptico do CTA hero */
+
+  /* --- espaçamento ------------------------------------------------------
+     Continua em px, e continua de propósito: espaçamento estrutural não deve
+     escalar com o font-size do usuário, senão a página desmonta no zoom de
+     texto de 200% (WCAG 1.4.4).
+
+     O que mudou: os degraus de 5 para cima passaram a interpolar por `cqi`,
+     a MESMA unidade da escala tipográfica. É isso que faz a densidade
+     acompanhar o tamanho da fonte — se o texto cresce no monitor largo e o
+     respiro não, a tela fica apertada em vez de confortável. Os degraus 1–4
+     ficam fixos: são gaps de dentro de controle (ícone/rótulo, contador,
+     linha de árvore), e um respiro de 4px que vira 6px não melhora nada e
+     desalinha peças que precisam bater. */
+  --esp-1: 4px;
+  --esp-2: 6px;
+  --esp-3: 8px;
+  --esp-4: 12px;
+  --esp-5: clamp(16px, 14.29px + 0.357cqi, 20px);
+  --esp-6: clamp(20px, 17.43px + 0.536cqi, 26px);
+  --esp-7: clamp(24px, 20.57px + 0.714cqi, 32px);
+  --esp-8: clamp(32px, 26.86px + 1.071cqi, 44px);
+  --esp-9: clamp(40px, 33.14px + 1.429cqi, 56px);
+  --esp-10: clamp(56px, 47.43px + 1.786cqi, 76px);
+  --esp-11: clamp(72px, 60px + 2.5cqi, 100px);
+  --esp-12: clamp(96px, 80.57px + 3.214cqi, 132px);
+
+  /* --- geometria -------------------------------------------------------- */
+  --raio-xs: 4px;
+  --raio-sm: 6px;
+  --raio: 8px;
+  --raio-lg: 12px;
+  --raio-xl: 16px;
+  --raio-pilula: 999px;
+
+  --altura-controle-sm: 28px;
+  --altura-controle: 34px;
+  --altura-controle-lg: 44px;
+  --altura-controle-hero: 52px;
+
+  /* Altura do cromo público (barra de topo, rodapé utilitário) — ver
+     `estilos/telas.css`. É medida de altura de ELEMENTO, não espaçamento
+     entre elementos, e por isso tem token próprio: era o piso de `--esp-10` e
+     deixou de ser, agora que `--esp-10` é fluido. Sem esta separação, a barra
+     de topo teria começado a crescer com a largura da tela sem que ninguém
+     tivesse pedido isso. Alturas de controle seguem a mesma regra e ficam
+     fixas: alvo de toque não é tipografia. */
+  --altura-cromo: 56px;
+
+  /* Ícone e logo. O padrão do sistema continua sendo `1em` — o ícone que
+     acompanha texto cresce junto com ele. Esta escala é para o ícone que não
+     acompanha texto nenhum (faixa de plataformas, cabeçalho, botão só-ícone). */
+  --icone-sm: 16px;
+  --icone-md: 20px;
+  --icone-lg: 24px;
+  --icone-xl: 32px;
+  --icone-2xl: 44px;
+
+  /* Tamanho do símbolo da marca na splash. Era um `9rem` literal escondido
+     no fallback de `var(--marca-simbolo-tamanho, 9rem)` em componentes.css. */
+  --tamanho-marca: clamp(6rem, 4.5rem + 6cqi, 11rem);
+
+  /* --- larguras ---------------------------------------------------------
+     Duas medidas de LEITURA e duas de CASCA, e a diferença entre elas é o que
+     impede tanto a linha de 140 caracteres quanto a tabela espremida.
+
+     · leitura      — texto corrido. ~70 caracteres é a medida confortável
+                      clássica; em `ch`, ela acompanha a fonte sozinha.
+     · casca        — a largura padrão da página. Cresce com a tela e PARA:
+                      1040px de piso, 1440px de teto. Sem o teto, a barra de
+                      topo e a tabela de histórico esticariam até a borda de
+                      um monitor ultrawide e o olho perderia a linha.
+     · densa        — telas que ganham com mais colunas visíveis ao mesmo
+                      tempo (histórico, plano de mídia). Teto mais alto.
+     · estreita     — formulário de foco único (cadastro).
+
+     `cqi` de novo, e não `vw`: o palco do catálogo precisa poder mostrar a
+     casca estreita sem mentir. Quando a clamp devolve um valor maior que o
+     contêiner, o `width: 100%` de `.pagina` vence e nada estoura. */
+  --largura-leitura: 70ch;
+  --largura-leitura-curta: 46ch;
+  --largura-conteudo: clamp(1040px, 900px + 30cqi, 1440px);
+  --largura-densa: clamp(1040px, 880px + 46cqi, 1760px);
+  --largura-estreita: clamp(570px, 520px + 10cqi, 690px);
+
+  /* --- elevação ----------------------------------------------------------
+     A GEOMETRIA da sombra é do sistema; a TINTA é do tema (bloco de cor
+     acima), porque sombra clara sobre superfície escura não existe. */
+
+  /* Assinatura de foco do produto. O anel opaco é o que satisfaz o
+     contraste 3:1; o halo é o acabamento. Sempre os dois juntos.
+
+     O halo saiu de rgb() literal para `color-mix` sobre o próprio token de
+     cor: assim ele acompanha o tema sem precisar de uma segunda declaração
+     (no escuro só muda `--halo-foco-forca`, de 12% para 30%). Se o navegador
+     não suportar `color-mix`, o que se perde é o halo — o `outline` opaco,
+     que é quem satisfaz o WCAG 2.4.11, continua lá. */
+  --anel-foco: 2px solid var(--acao);
+  --anel-foco-deslocamento: 2px;
+  --halo-foco: 0 0 0 3px color-mix(in srgb, var(--acao) var(--halo-foco-forca), transparent);
+  --halo-foco-erro: 0 0 0 3px color-mix(in srgb, var(--erro) var(--halo-foco-forca), transparent);
+  --halo-foco-inverso: 0 0 0 3px color-mix(in srgb, var(--acao-inversa) 45%, transparent);
+
+  /* --- motion ----------------------------------------------------------- */
+  --dur-instantanea: 90ms; /* pressionar */
+  --dur-rapida: 140ms; /* hover, cor, borda */
+  --dur-media: 200ms; /* mudança de estado */
+  --dur-lenta: 280ms; /* entrada de conteúdo, overlay */
+  --dur-giro: 0.8s; /* volta completa do spinner */
+  --dur-confirmacao: 1500ms; /* "Copiado!" e afins */
+  --curva-padrao: cubic-bezier(0.4, 0, 0.2, 1);
+  --curva-entrada: cubic-bezier(0.16, 1, 0.3, 1);
+  --curva-saida: cubic-bezier(0.4, 0, 1, 1);
+
+  /* --- camadas ---------------------------------------------------------- */
+  --z-base: 0;
+  --z-elevado: 10; /* cabeçalho fixo de tabela */
+  --z-cabecalho: 100;
+  --z-sobreposicao: 800;
+  --z-modal: 900;
+  --z-aviso: 1000;
+  --z-splash: 1100;
+
+  /* Os quatro tons decorativos da marca são POR TEMA (blocos 2 e 3): os do
+     claro reprovam 3:1 sobre a superfície escura. Só a velocidade é do
+     sistema. */
+  --marca-velocidade: 90; /* px por segundo, lido pelo JS via getComputedStyle */
+
+  /* --- cores de marca de TERCEIROS --------------------------------------
+     Não são tokens de design: são constantes das marcas Meta, Google, TikTok
+     e Google Marketing Platform, usadas exclusivamente pelos logos em
+     `componentes/icones.tsx`. Ficam aqui só para que nenhum componente
+     carregue hexadecimal literal — não reutilize nenhuma delas como cor de
+     estado, de ação ou de superfície do produto. */
+  --logo-meta: #0081fb;
+  --logo-meta-fundo: #0064e0;
+  --logo-google-azul: #4285f4;
+  --logo-google-vermelho: #ea4335;
+  --logo-google-amarelo: #fbbc05;
+  --logo-google-verde: #34a853;
+  --logo-tiktok-ciano: #25f4ee;
+  --logo-tiktok-rosa: #fe2c55;
+  /* `--logo-tiktok-tinta` é o único destes que muda com o tema (preto some no
+     escuro) e por isso mora nos blocos 2 e 3. */
+  --logo-dv360-1: #1a73e8;
+  --logo-dv360-2: #34a853;
+
+  /* --- superfície inversa: papéis que só existem sobre o escuro -----------
+     Continuam existindo depois do tema escuro: a barra de preview é escura
+     nos DOIS temas (é assinatura do artefato entregue, não consequência do
+     tema), então precisa da sua própria família de cores. */
+  --acao-inversa: var(--paleta-azul-400); /* 7.93:1 no --card-inverso */
+  --ok-inversa: var(--paleta-verde-400);
+  --alerta-inversa: var(--paleta-ambar-400);
+
+  font-family: var(--fonte-ui);
+  font-size: 15px;
+  line-height: var(--entrelinha);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* `[hidden]` precisa ganhar de TODA classe de layout.
+   A regra da folha do agente é `[hidden] { display: none }` — especificidade
+   (0,1,0), a mesma de `.pilha { display: flex }`, e quem vier depois na
+   cascata vence. Um painel escondido que também é `.pilha`/`.grade`/`.linha`
+   continuaria na tela, empilhado sobre o painel ativo. `!important` aqui é
+   correção de cascata, não gambiarra: nenhum elemento com o atributo `hidden`
+   deve ocupar espaço, em hipótese nenhuma. */
+[hidden] {
+  display: none !important;
+}
+
+/* O contêiner RAIZ do sistema.
+   Sem ele, `cqi` nas escalas de tipo e de espaço não teria contêiner nenhum
+   para medir e cairia na largura da JANELA — exatamente o comportamento que
+   este design system não usa. Com ele, a leitura padrão é a largura da página,
+   e qualquer contêiner mais próximo (`.pagina`, `.palco`, `.gerar-palco`)
+   assume no lugar. É `inline-size`, então só a largura é contida. */
+body {
+  container: raiz / inline-size;
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fundo);
+  color: var(--texto);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: var(--peso-forte);
+  line-height: var(--entrelinha-apertada);
+}
+
+/* --- controles --- */
+
+label {
+  display: block;
+  font-size: var(--tipo-sm);
+  font-weight: var(--peso-medio);
+  color: var(--texto-suave);
+  margin-bottom: var(--esp-1);
+}
+
+/* `:not([type='checkbox'], [type='radio'])` não é preciosismo: sem ele, a
+   caixa e o rádio nativos herdam `width: 100%` e viram uma faixa que atravessa
+   a coluna. Já valia para a caixa "Texto grande" do catálogo; virou obrigatório
+   com o alternador de tema. */
+input:not([type='checkbox'], [type='radio']),
+select {
+  width: 100%;
+  padding: var(--esp-3) var(--esp-4);
+  font: inherit;
+  font-size: var(--tipo-base);
+  color: var(--texto);
+  background: var(--card);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-sm);
+  transition: border-color var(--dur-rapida) var(--curva-padrao),
+    box-shadow var(--dur-rapida) var(--curva-padrao);
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--acao);
+  box-shadow: var(--halo-foco);
+}
+
+input[aria-invalid='true'],
+select[aria-invalid='true'] {
+  border-color: var(--erro);
+}
+
+input[aria-invalid='true']:focus,
+select[aria-invalid='true']:focus {
+  box-shadow: var(--halo-foco-erro);
+}
+
+button {
+  font: inherit;
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-medio);
+  padding: var(--esp-3) var(--esp-5);
+  border-radius: var(--raio-sm);
+  border: 1px solid transparent;
+  background: var(--acao);
+  color: var(--texto-em-preenchimento);
+  cursor: pointer;
+  transition: background var(--dur-rapida) var(--curva-padrao);
+}
+
+button:hover:not(:disabled) {
+  background: var(--acao-escura);
+}
+
+/* Foco visível em botão: não existia: a navegação por teclado passava sem
+   nenhuma marca (WCAG 2.4.7). Mesma assinatura dos campos. */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: var(--anel-foco);
+  outline-offset: var(--anel-foco-deslocamento);
+  box-shadow: var(--halo-foco);
+}
+
+button:disabled {
+  background: var(--desabilitado-fundo);
+  color: var(--desabilitado-texto);
+  cursor: not-allowed;
+}
+
+button.secundario {
+  background: var(--card);
+  color: var(--texto);
+  border-color: var(--borda-forte);
+}
+
+button.secundario:hover:not(:disabled) {
+  background: var(--fundo);
+}
+
+/* --- estruturas --- */
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  box-shadow: var(--sombra);
+}
+
+.rotulo-secao {
+  font-size: var(--tipo-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-rotulo);
+  color: var(--texto-suave);
+  font-weight: var(--peso-forte);
+}
+
+.mono {
+  font-family: var(--fonte-mono);
+}
+
+/* Região só para leitor de tela (avisos, mudança de rota, contagem de
+   resultados). Não usar display:none — isso some do leitor também. */
+.apenas-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===========================================================================
+   Motion reduzido — obrigatório, não opcional.
+   Zera transição e animação, exceto onde o movimento É a informação:
+   [data-movimento='essencial'] (indicador de carregamento). Esses precisam
+   trocar de comportamento por conta própria — ver a spec de cada um.
+   =========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  /* A exceção é a parte que importa: um reset global escrito como `*` congela
+     também o spinner de carregamento, e um indicador de progresso parado
+     comunica "travou" — pior que o movimento que se queria remover. Tudo que
+     marcar data-movimento='essencial' (e seus descendentes, daí o segundo
+     :not) fica de fora do reset e continua animando. O contrato é: o próprio
+     componente essencial já usa a versão discreta do movimento. */
+  *:not([data-movimento='essencial'], [data-movimento='essencial'] *),
+  *:not([data-movimento='essencial'], [data-movimento='essencial'] *)::before,
+  *:not([data-movimento='essencial'], [data-movimento='essencial'] *)::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  /* Movimento essencial, versão reduzida: o spinner gira, mas mais devagar e
+     sem pulso. O que não pode é parar. */
+  [data-movimento='essencial'] {
+    --dur-giro: 1.4s;
+  }
+
+  /* Skeleton: o brilho varrendo a tela é decorativo — vira pulso de opacidade
+     de baixa amplitude, que não translada nada. */
+  .esqueleto {
+    animation: esqueleto-pulso 2s ease-in-out infinite !important;
+    animation-duration: 2s !important;
+    animation-iteration-count: infinite !important;
+    background-image: none !important;
+  }
+}
+
+/* ===========================================================================
+   Modo forçado de cor (Windows alto contraste)
+   ---------------------------------------------------------------------------
+   No modo forçado o sistema DESCARTA as cores do autor — os dois temas viram
+   a paleta do usuário, e é isso que deve acontecer. O que não pode acontecer é
+   uma peça cuja única definição era a cor virar invisível. Duas delas:
+
+   · o anel de foco, que aqui usa `Highlight` (a cor de seleção do sistema) em
+     vez do azul de ação, e ganha o `forced-color-adjust: none` só no que
+     precisa preservar o par cor/fundo;
+   · o traço de cartão e de campo, que precisa existir para a superfície ainda
+     ter limite quando `background` é ignorado.
+
+   Este é um dos quatro `@media` autorizados pelo sistema (ver o topo de
+   `estilos/layout.css`): reduced-motion, contrast, forced-colors e print.
+   =========================================================================== */
+@media (forced-colors: active) {
+  .card,
+  .palco,
+  input,
+  select,
+  .botao,
+  button {
+    border: 1px solid CanvasText;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus,
+  select:focus,
+  [tabindex]:focus-visible {
+    /* `box-shadow` é descartado no modo forçado — o halo simplesmente some, e
+       o outline passa a ser a única marca de foco. Por isso ele engorda. */
+    outline: 3px solid Highlight;
+    outline-offset: var(--anel-foco-deslocamento);
+  }
+}

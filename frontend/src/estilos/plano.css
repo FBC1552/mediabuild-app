@@ -1,0 +1,310 @@
+/* ===========================================================================
+   MediaBuild · Plano de mídia
+   ---------------------------------------------------------------------------
+   Assunto irmão da Taxonomia (D-010), rota #/plano — não uma quarta aba.
+   Reaproveita `.arvore-lista`/`.arvore-nome`/`.arvore-codigo`/`.selo`/`.abas`/
+   `.card`/`.bloco`/`.pilha`/`.linha`/`.grade` de `componentes.css` e
+   `.pagina`/`.titulo-tela`/`.contexto-painel` de `layout.css`/`telas.css`.
+
+   Responsividade por @container, nunca @media (exceto motion/contraste),
+   mesma regra do resto do sistema (ver topo de `layout.css`). Nenhum valor
+   literal de cor, raio, sombra, espaçamento, tipografia ou duração — tudo
+   sai de `index.css`.
+   =========================================================================== */
+
+/* ===========================================================================
+   1 · CampoRateio — o controle duplo R$/% (docs/PLANO-DE-MIDIA-UI.md §4.3)
+   ---------------------------------------------------------------------------
+   R$ primeiro e mais largo (é o valor que a plataforma de mídia realmente
+   move); % ao lado, menor, em `--texto-suave`. `[data-derivado]` marca o
+   campo que a página calculou sozinha — nunca o que a pessoa digitou.
+   =========================================================================== */
+.campo-rateio {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--esp-2);
+  container: campo-rateio / inline-size;
+}
+
+.campo-rateio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-1);
+  padding-inline: var(--esp-2);
+  background: var(--fundo);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-sm);
+}
+
+.campo-rateio-item:has(.campo-rateio-input:focus-visible) {
+  border-color: var(--acao);
+  box-shadow: var(--halo-foco);
+}
+
+.campo-rateio-prefixo,
+.campo-rateio-sufixo {
+  font-size: var(--tipo-sm);
+  color: var(--texto-fraco);
+}
+
+.campo-rateio-input {
+  inline-size: 6.5em;
+  padding: var(--esp-1) 0;
+  font: inherit;
+  font-size: var(--tipo-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--texto);
+  text-align: end;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.campo-rateio-item:nth-child(2) .campo-rateio-input {
+  inline-size: 4.5em;
+}
+
+.campo-rateio-input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* O campo calculado (não digitado) some em cor suave — é o próprio sinal
+   visual de "isto é derivado", sem precisar de rótulo extra na tela. */
+.campo-rateio-input[data-derivado] {
+  color: var(--texto-suave);
+}
+
+.campo-rateio-status {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+}
+
+.campo-rateio-ok {
+  color: var(--ok-escura);
+}
+
+.campo-rateio-erro {
+  display: block;
+  flex-basis: 100%;
+  font-size: var(--tipo-xs);
+  color: var(--erro);
+}
+
+.campo-rateio[data-desabilitado] {
+  opacity: 0.6;
+}
+
+/* ===========================================================================
+   2 · Desbalanço — ícone com forma distinta (§4.2), nunca só cor
+   =========================================================================== */
+.icone[data-marca='sobrealocado'] .icone-desbalanco-corpo {
+  fill: currentColor;
+  stroke: none;
+}
+
+.icone[data-marca='sobrealocado'] .icone-desbalanco-furo {
+  stroke: var(--card);
+  fill: var(--card);
+}
+
+/* ===========================================================================
+   3 · Faixa de saldo (`FaixaDeSaldo`) — sempre visível, segue o foco
+   =========================================================================== */
+.faixa-saldo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--fundo);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+}
+
+.faixa-saldo-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+}
+
+.faixa-saldo-nome {
+  font-size: var(--tipo-sm);
+  font-weight: var(--peso-medio);
+  color: var(--texto-suave);
+}
+
+.faixa-saldo-separador {
+  color: var(--texto-fraco);
+}
+
+/* ===========================================================================
+   4 · Árvore editável do plano (`ArvorePlano`) — generaliza `.arvore-*` de
+   `componentes.css`/`gerador.css` para múltiplas campanhas e nós editáveis.
+   =========================================================================== */
+.plano-arvore-cartao {
+  container: plano-arvore / inline-size;
+}
+
+.plano-arvore {
+  gap: var(--esp-3);
+}
+
+.plano-no {
+  flex-wrap: wrap;
+  row-gap: var(--esp-2);
+}
+
+.plano-no[data-nivel='campanha'] .arvore-nome {
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-forte);
+}
+
+.plano-detalhe-no {
+  margin-inline-start: var(--esp-8);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--fundo);
+  border-radius: var(--raio-sm);
+}
+
+@container plano-arvore (max-width: 480px) {
+  .plano-detalhe-no {
+    margin-inline-start: var(--esp-3);
+  }
+}
+
+/* --- divergência de nome (D) --- */
+.divergencia-nome summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.divergencia-nome summary::-webkit-details-marker {
+  display: none;
+}
+
+.divergencia-nome-corpo {
+  margin-block-start: var(--esp-2);
+  padding: var(--esp-3) var(--esp-4);
+  background: var(--alerta-clara);
+  border: 1px solid var(--alerta-borda);
+  border-radius: var(--raio-sm);
+}
+
+/* --- combobox de entidade existente --- */
+.seletor-entidade {
+  position: relative;
+  inline-size: min(100%, 360px);
+}
+
+.seletor-entidade-lista {
+  position: absolute;
+  z-index: var(--z-elevado);
+  inset-inline-start: 0;
+  inset-block-start: calc(100% + var(--esp-1));
+  inline-size: 100%;
+  max-block-size: 240px;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--esp-1);
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--borda-forte);
+  border-radius: var(--raio-sm);
+  box-shadow: var(--sombra-md);
+}
+
+.seletor-entidade-lista li {
+  padding: var(--esp-1) 0;
+}
+
+/* ===========================================================================
+   5 · Tabela tokenizada (`TabelaMetas`, índice de planos, catálogo de
+   métricas) — substitui o padrão de `style` inline de `Dicionario.tsx`/
+   `Historico.tsx` (dívida anterior a este desenho, sinalizada para migração
+   futura em docs/PLANO-DE-MIDIA-UI.md §7, não feita aqui).
+   =========================================================================== */
+.tabela-rolagem {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--tipo-md);
+}
+
+.tabela-celula {
+  padding: var(--esp-3) var(--esp-4);
+  text-align: start;
+  vertical-align: top;
+  border-block-end: 1px solid var(--borda);
+  white-space: nowrap;
+}
+
+.tabela thead .tabela-celula {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: var(--z-elevado);
+  background: var(--card);
+  font-size: var(--tipo-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-rotulo);
+  color: var(--texto-suave);
+}
+
+.tabela tfoot .tabela-celula {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: var(--z-elevado);
+  background: var(--card);
+  font-weight: var(--peso-forte);
+  border-block-end: 0;
+  border-block-start: 2px solid var(--borda-forte);
+}
+
+/* Colunas de identificação fixas na rolagem horizontal (§5). */
+.tabela-fixa {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: calc(var(--z-elevado) + 1);
+  background: var(--card);
+  white-space: normal;
+}
+
+/* --- célula de meta --- */
+.celula-meta {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--esp-1);
+  align-items: flex-start;
+}
+
+.celula-meta-input {
+  inline-size: 5.5em;
+  padding: var(--esp-1) var(--esp-2);
+  font-size: var(--tipo-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.celula-meta-erro {
+  font-size: var(--tipo-xs);
+  color: var(--erro);
+}
+
+/* ===========================================================================
+   Print — o `.pagina` já cuida do resto; a rolagem sticky não faz sentido
+   impressa, e a coluna fixa duplicaria conteúdo.
+   =========================================================================== */
+@media print {
+  .tabela thead .tabela-celula,
+  .tabela tfoot .tabela-celula,
+  .tabela-fixa {
+    position: static;
+  }
+}

@@ -1,0 +1,51 @@
+node_modules/
+dist/
+build/
+*.log
+.env
+
+# Artefatos de build do TypeScript/Vite
+*.tsbuildinfo
+.vite/
+
+# Arquivos temporários do Office (lock files de documento aberto)
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Backups do banco — dados, não código
+backups/
+
+# Editor / SO
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# --- Trava de publicação: nada de dbt, dados tabulares ou dumps (ver scripts/verificar_publicacao.py)
+dbt_project.yml
+profiles.yml
+dbt_packages/
+dbt_modules/
+target/
+seeds/
+snapshots/
+manifest.json
+run_results.json
+*.csv
+*.tsv
+*.parquet
+*.xlsx
+*.xls
+*.dump
+*.sqlite
+*.duckdb
+.env.*
+!.env.example

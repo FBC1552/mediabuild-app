@@ -1,0 +1,494 @@
+/* ===========================================================================
+   MediaBuild · telas de entrada
+   ---------------------------------------------------------------------------
+   Cromo público (barra de topo, rodapé utilitário), hero da tela inicial,
+   guia de uso e casca do cadastro.
+
+   Regras herdadas, sem exceção aqui:
+   · nenhum valor literal de cor, raio, sombra, espaçamento ou duração;
+   · responsividade por @container — @media só para prefers-reduced-motion,
+     prefers-contrast e forced-colors;
+   · nenhum componente cria margem externa: o espaço é do contêiner.
+
+   Esta folha é importada por último, então ela pode ajustar um valor de
+   `componentes.css` sem precisar editá-lo. Ajuste, não reescrita: se uma peça
+   passar a valer para o produto inteiro, ela sobe para a camada certa.
+   =========================================================================== */
+
+/* ===========================================================================
+   1 · Cascas de página
+   ---------------------------------------------------------------------------
+   Coluna de altura de viewport com o rodapé sempre embaixo. Na tela inicial a
+   casca é o que permite tirar barra e rodapé de dentro do palco: o monograma
+   quica dentro do palco e não tem como alcançar o que está fora dele.
+   =========================================================================== */
+
+.casca-marca,
+.casca-conteudo {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+}
+
+.casca-conteudo > main {
+  flex: 1 0 auto;
+}
+
+/* O palco perde a altura fixa de viewport e passa a ocupar o que sobra entre
+   a barra e o rodapé. `flex: 1 1 0` mantém a altura DEFINIDA (vem do
+   algoritmo do flex, não do conteúdo), que é o que `container-type: size`
+   exige — sem isso a consulta de contêiner da splash para de resolver e a
+   marca móvel nunca aparece. */
+.casca-marca > .splash {
+  flex: 1 1 0;
+  block-size: auto;
+  min-block-size: 0;
+}
+
+/* Parágrafo não carrega margem própria em nenhuma destas telas: quem espaça é
+   `.pilha`. Sem isto o gap do contêiner soma com a margem do UA e a hierarquia
+   de espaçamento deixa de ser previsível. */
+.casca-marca p,
+.casca-conteudo p,
+.casca-conteudo dl,
+.casca-conteudo dd {
+  margin: 0;
+}
+
+/* ===========================================================================
+   2 · Barra de topo
+   ---------------------------------------------------------------------------
+   Fina, superfície de cartão, um traço de separação. Não é sticky: nestas
+   telas o conteúdo é curto e barra fixa só rouba altura útil.
+   =========================================================================== */
+
+.barra-topo {
+  container-type: inline-size;
+  background: var(--card);
+  border-bottom: 1px solid var(--borda);
+}
+
+.barra-topo-interna {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--esp-5);
+  inline-size: 100%;
+  max-inline-size: var(--largura-conteudo);
+  min-block-size: var(--altura-cromo);
+  margin-inline: auto;
+  padding-inline: var(--esp-5);
+}
+
+.barra-topo-marca {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-3);
+  padding: var(--esp-1) var(--esp-2);
+  margin-inline-start: calc(var(--esp-2) * -1);
+  border-radius: var(--raio-sm);
+  text-decoration: none;
+  color: var(--texto);
+}
+
+.barra-topo-marca:hover .marca-logotipo {
+  color: var(--acao-escura);
+}
+
+.simbolo-topo {
+  display: block;
+  inline-size: var(--esp-7);
+  block-size: var(--esp-7);
+  object-fit: contain;
+}
+
+.barra-topo-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-1);
+}
+
+/* Alvo de 34px de altura — acima do piso de 24px do SC 2.5.8, e o mesmo do
+   restante dos controles do produto. */
+.link-topo {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--altura-controle);
+  padding-inline: var(--esp-4);
+  border-radius: var(--raio-sm);
+  font-size: var(--tipo-base);
+  font-weight: var(--peso-medio);
+  color: var(--texto-suave);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur-rapida) var(--curva-padrao),
+    background-color var(--dur-rapida) var(--curva-padrao);
+}
+
+.link-topo:hover {
+  color: var(--texto);
+  background: var(--neutro-clara);
+}
+
+/* `aria-current` é o estado; o estilo apenas o torna visível. */
+.link-topo[aria-current='page'] {
+  color: var(--acao-escura);
+  background: var(--acao-clara);
+  font-weight: var(--peso-forte);
+}
+
+/* Contêiner estreito: a marca some do texto e fica só o símbolo, para os
+   links não quebrarem em duas linhas. O nome acessível do link continua no
+   `aria-label`, então nada se perde para o leitor de tela. */
+@container (max-width: 480px) {
+  .barra-topo-marca .marca-logotipo {
+    display: none;
+  }
+
+  .link-topo {
+    padding-inline: var(--esp-3);
+    font-size: var(--tipo-sm);
+  }
+}
+
+/* ===========================================================================
+   3 · Rodapé utilitário
+   =========================================================================== */
+
+.rodape-utilitario {
+  background: var(--card);
+  border-top: 1px solid var(--borda);
+}
+
+.rodape-utilitario-interno {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-2) var(--esp-5);
+  inline-size: 100%;
+  max-inline-size: var(--largura-conteudo);
+  min-block-size: var(--altura-cromo);
+  margin-inline: auto;
+  padding: var(--esp-3) var(--esp-5);
+}
+
+.rodape-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-1);
+}
+
+.link-rodape {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--altura-controle-sm);
+  padding-inline: var(--esp-3);
+  border-radius: var(--raio-sm);
+  font-size: var(--tipo-sm);
+  color: var(--texto-suave);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link-rodape:hover {
+  color: var(--acao-escura);
+  background: var(--acao-clara);
+}
+
+/* Empurrado para a direita quando cabe; quebra para a linha de baixo quando
+   não cabe. Sem ponto de quebra: é o `flex-wrap` que decide. */
+.rodape-nota {
+  margin-inline-start: auto;
+  font-size: var(--tipo-xs);
+  color: var(--texto-fraco);
+}
+
+/* ===========================================================================
+   4 · Hero da tela inicial
+   =========================================================================== */
+
+/* O wordmark é o elemento de maior peso da tela. Sobe de tamanho só quando o
+   palco comporta — tracking largo em contêiner estreito estoura a linha. */
+.marca-logotipo[data-tamanho='hero'] {
+  font-size: var(--tipo-2xl);
+  color: var(--acao);
+}
+
+@container palco (min-width: 720px) {
+  .marca-logotipo[data-tamanho='hero'] {
+    font-size: var(--tipo-4xl);
+  }
+}
+
+.marca-logotipo[data-tamanho='sm'] {
+  font-size: var(--tipo-md);
+}
+
+.hero-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-4);
+}
+
+.destaque-item {
+  font-size: var(--tipo-md);
+  color: var(--texto-suave);
+  line-height: var(--entrelinha);
+}
+
+.destaque-item strong {
+  color: var(--texto);
+  font-weight: var(--peso-forte);
+}
+
+.destaque-item a {
+  color: var(--acao-escura);
+  font-weight: var(--peso-medio);
+}
+
+/* Faixa de plataformas: fecha o bloco central com o que o produto cobre. Fica
+   DENTRO do bloco de propósito — o bloco inteiro é a parede do monograma, e
+   uma faixa solta no palco viraria uma segunda parede a manter. */
+.faixa-plataformas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-3);
+}
+
+.faixa-plataformas-lista {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-3) var(--esp-6);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.plataforma-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--esp-2);
+  font-size: var(--tipo-md);
+  font-weight: var(--peso-medio);
+  color: var(--texto-suave);
+}
+
+/* ===========================================================================
+   4b · Marca clicável dentro do aplicativo de taxonomia
+   ---------------------------------------------------------------------------
+   Único ponto de saída do app de taxonomia para o resto do produto — ver o
+   comentário em `AplicativoTaxonomia.tsx`. Herda o tamanho do `.titulo-tela`
+   que a envolve; só acrescenta o que um link precisa (cor, sem sublinhado,
+   feedback de hover) sem alterar o peso visual do título.
+   =========================================================================== */
+
+.titulo-tela-link {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--raio-sm);
+}
+
+.titulo-tela-link:hover {
+  color: var(--acao-escura);
+}
+
+/* ===========================================================================
+   5 · Telas de conteúdo (guia, cadastro)
+   =========================================================================== */
+
+.titulo-secao {
+  font-size: var(--tipo-xl);
+  color: var(--texto);
+}
+
+.texto-guia {
+  font-size: var(--tipo-base);
+  color: var(--texto);
+  line-height: var(--entrelinha-solta);
+}
+
+/* Ressalva: continua legível (AA no cartão e na página), mas um degrau abaixo
+   do corpo — é nota de rodapé, não instrução. */
+.texto-guia[data-tom='ressalva'] {
+  font-size: var(--tipo-md);
+  color: var(--texto-suave);
+  border-inline-start: 2px solid var(--borda-forte);
+  padding-inline-start: var(--esp-4);
+}
+
+/* Exemplo de nomenclatura: mesma tipografia do artefato que o produto
+   entrega. Monoespaçada e quebrável, porque nome longo não pode estourar. */
+.exemplo-nome {
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-lg);
+  font-weight: var(--peso-forte);
+  color: var(--texto);
+  background: var(--neutro-clara);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio-sm);
+  padding: var(--esp-3) var(--esp-4);
+  word-break: break-all;
+}
+
+.lista-definicao {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--esp-3) var(--esp-6);
+  align-items: baseline;
+  font-size: var(--tipo-base);
+  line-height: var(--entrelinha);
+}
+
+.lista-definicao dt {
+  color: var(--texto);
+  font-weight: var(--peso-forte);
+  white-space: nowrap;
+}
+
+.lista-definicao dd {
+  color: var(--texto-suave);
+}
+
+/* Duas colunas viram uma quando o termo não cabe ao lado da definição. */
+@container pagina (max-width: 620px) {
+  .lista-definicao {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--esp-1);
+  }
+
+  .lista-definicao dd {
+    padding-block-end: var(--esp-3);
+  }
+}
+
+/* ===========================================================================
+   6 · Limitação declarada e formulário inerte (cadastro)
+   ---------------------------------------------------------------------------
+   Cor de alerta, não de erro: nada falhou. O que existe é uma capacidade
+   ausente, e o usuário precisa saber disso antes de tentar preencher.
+   =========================================================================== */
+
+.aviso-limitacao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-3);
+  padding: var(--esp-6);
+  background: var(--alerta-clara);
+  border: 1px solid var(--alerta-borda);
+  border-radius: var(--raio);
+}
+
+.aviso-limitacao-titulo {
+  font-size: var(--tipo-lg);
+  font-weight: var(--peso-forte);
+  color: var(--alerta);
+  line-height: var(--entrelinha-apertada);
+}
+
+.formulario-inerte {
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.formulario-inerte legend {
+  padding-inline: 0;
+}
+
+/* Campo desabilitado precisa PARECER desabilitado — atenuar só o texto e
+   deixar a moldura de campo ativo convida a clicar. `-webkit-text-fill-color`
+   entra porque o WebKit ignora `color` em controle desabilitado. */
+.formulario-inerte input:disabled {
+  background: var(--fundo);
+  border-color: var(--borda);
+  color: var(--texto-fraco);
+  -webkit-text-fill-color: var(--texto-fraco);
+  cursor: not-allowed;
+}
+
+.formulario-inerte label {
+  color: var(--texto-fraco);
+}
+
+/* ===========================================================================
+   7 · Alto contraste e modo forçado
+   ---------------------------------------------------------------------------
+   Os únicos @media autorizados nesta folha. Superfície e traço de separação
+   precisam sobreviver quando o sistema descarta as cores do autor.
+   =========================================================================== */
+
+@media (forced-colors: active) {
+  .barra-topo,
+  .rodape-utilitario {
+    border-color: CanvasText;
+  }
+
+  .link-topo[aria-current='page'] {
+    forced-color-adjust: none;
+    color: HighlightText;
+    background: Highlight;
+  }
+}
+
+/* ===========================================================================
+   Barra de topo · lado direito
+   ---------------------------------------------------------------------------
+   Navegação e conta são grupos diferentes e ficam separados por um respiro
+   maior que o interno de cada um — senão o menu de conta se lê como mais um
+   item de navegação, que é justamente o que a §3.3 evita.
+   =========================================================================== */
+
+.barra-topo-direita {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-5);
+}
+
+/* ===========================================================================
+   Entrar (`#/entrar`)
+   ---------------------------------------------------------------------------
+   Coluna única centrada. Sem barra de topo e sem rodapé de links: não há para
+   onde ir a partir daqui, e um menu de conta sem conta seria decoração.
+   =========================================================================== */
+
+.entrar-casca {
+  align-items: center;
+  justify-content: center;
+  gap: var(--esp-7);
+  padding-block: var(--esp-8);
+}
+
+.entrar-marca {
+  display: flex;
+  align-items: center;
+  gap: var(--esp-3);
+  margin: 0;
+}
+
+/* A casca já centra e já respira; a página não repete o padding de topo das
+   telas de conteúdo, senão o cartão desce da linha do olho. */
+.entrar {
+  padding-block: 0;
+}
+
+/* A regra geral da casca faz o `<main>` crescer para empurrar o rodapé para
+   baixo. Aqui não há rodapé para empurrar, e crescer anularia a centralização
+   vertical. */
+.entrar-casca > main {
+  flex: 0 0 auto;
+}
+
+.entrar-cartao {
+  padding: var(--esp-7);
+}
+
+.entrar-nota {
+  margin: 0;
+  font-size: var(--tipo-sm);
+  color: var(--texto-fraco);
+}

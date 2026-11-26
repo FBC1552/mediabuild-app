@@ -1,0 +1,303 @@
+/* ===========================================================================
+   MediaBuild · primitivas de layout
+   ---------------------------------------------------------------------------
+   DECISÃO DE RESPONSIVIDADE (a que decide a honestidade do catálogo):
+   este design system NÃO usa @media para layout. Usa (1) layout intrínseco —
+   grid/flex que se adapta sem ponto de quebra — e (2) @container quando um
+   ponto de quebra é inevitável.
+
+   Motivo: o palco do catálogo é um <div> de largura fixa, não um viewport.
+   Com @media, o palco de 360px renderiza o layout de desktop e o catálogo
+   mente. Com @container, o mesmo componente dentro de um palco de 360px se
+   comporta exatamente como se comportaria num celular — o catálogo passa a
+   ser prova, não ilustração.
+
+   Regra de uso: todo componente que muda de forma por largura consulta o
+   contêiner mais próximo, nunca a janela. @media fica reservado a
+   prefers-reduced-motion, prefers-contrast, forced-colors e print.
+
+   Suporte: @container é baseline desde Chrome/Edge 105, Firefox 110,
+   Safari 16 (2022-2023). Sem polyfill. Se o contêiner não existir, a consulta
+   sobe até o <html>, que é o comportamento desejado.
+   =========================================================================== */
+
+/* --- declaração de contêiner ------------------------------------------- */
+
+/* Todo palco do catálogo e toda região de tela que hospeda componentes
+   adaptativos declara contexto. `inline-size` é o padrão: mede só a largura,
+   sem risco de loop de layout. */
+.contexto {
+  container-type: inline-size;
+}
+
+.contexto-pagina {
+  container: pagina / inline-size;
+}
+
+.contexto-painel {
+  container: painel / inline-size;
+}
+
+/* `size` (largura E altura) só onde a altura é conhecida e independente do
+   conteúdo — o caso da splash, que ocupa a viewport inteira e precisa decidir
+   por altura também. Exige altura definida no próprio elemento. */
+.contexto-palco {
+  container: palco / size;
+}
+
+/* --- pilha vertical ------------------------------------------------------
+   O espaçamento entre irmãos pertence ao contêiner, nunca ao componente.
+   `.pilha` é o único lugar do sistema autorizado a criar margem vertical. */
+.pilha {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-5);
+}
+
+.pilha[data-espaco='1'] { gap: var(--esp-1); }
+.pilha[data-espaco='2'] { gap: var(--esp-2); }
+.pilha[data-espaco='3'] { gap: var(--esp-3); }
+.pilha[data-espaco='4'] { gap: var(--esp-4); }
+.pilha[data-espaco='6'] { gap: var(--esp-6); }
+.pilha[data-espaco='7'] { gap: var(--esp-7); }
+.pilha[data-espaco='8'] { gap: var(--esp-8); }
+.pilha[data-espaco='9'] { gap: var(--esp-9); }
+
+/* --- linha que quebra sozinha -------------------------------------------
+   Sem ponto de quebra: quando não cabe, quebra. É o padrão para barras de
+   ação, filtros e grupos de controle. */
+.linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--esp-4);
+}
+
+.linha[data-espaco='2'] { gap: var(--esp-2); }
+.linha[data-espaco='3'] { gap: var(--esp-3); }
+.linha[data-espaco='5'] { gap: var(--esp-5); }
+.linha[data-alinhar='fim'] { justify-content: flex-end; }
+.linha[data-alinhar='entre'] { justify-content: space-between; }
+.linha[data-alinhar='topo'] { align-items: flex-start; }
+.linha[data-alinhar='base'] { align-items: baseline; }
+/* Empurra o resto da linha para a direita a partir deste item. */
+.linha > .empurra { margin-inline-start: auto; }
+
+/* --- grade intrínseca ----------------------------------------------------
+   auto-fit + minmax é responsividade sem consulta nenhuma: três colunas
+   quando cabem três, uma quando cabe uma. O min() evita estouro quando o
+   contêiner é mais estreito que a base da coluna (o palco de 360px). */
+.grade {
+  display: grid;
+  gap: var(--esp-6);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--grade-base, 240px)), 1fr));
+}
+
+.grade[data-base='estreita'] { --grade-base: 180px; }
+.grade[data-base='larga'] { --grade-base: 320px; }
+
+/* Cartões de altura igual: é o grid que iguala, não altura fixa. */
+.grade > * {
+  min-width: 0;
+}
+
+/* --- casca de página -----------------------------------------------------
+   Três larguras, e a escolha entre elas é sobre DENSIDADE, não sobre gosto:
+
+     estreita — uma coluna de foco único (cadastro, guia);
+     padrão   — o resto do produto;
+     densa    — telas cujo trabalho é comparar linhas lado a lado (histórico,
+                plano de mídia). Teto mais alto porque cada coluna a mais
+                visível ao mesmo tempo é uma rolagem horizontal a menos.
+
+   As três crescem com a tela e PARAM (a clamp de cada token em index.css).
+   Esticar até a borda num monitor largo não é "aproveitar a tela": é fazer o
+   olho perder o começo da próxima linha. */
+.pagina {
+  width: 100%;
+  max-width: var(--largura-conteudo);
+  margin-inline: auto;
+  padding-inline: var(--esp-5);
+  padding-block: var(--esp-9) var(--esp-11);
+}
+
+.pagina[data-largura='estreita'] {
+  max-width: var(--largura-estreita);
+}
+
+.pagina[data-largura='densa'] {
+  max-width: var(--largura-densa);
+}
+
+/* Texto corrido: guia, cadastro, tela de erro. Crescer aqui é ERRO — linha de
+   140 caracteres é o defeito de legibilidade mais comum em tela grande. */
+.pagina[data-largura='leitura'] {
+  max-width: var(--largura-leitura);
+}
+
+/* --- cabeçalho de tela ---------------------------------------------------
+   Envolve o `VoltarPara` E o `h1`, e é ELE que carrega `data-foco-rota`.
+
+   Não é detalhe de marcação: com o link acima do `h1`, focar o `h1` deixaria
+   o Voltar atrás do ponto de foco, alcançável só por Shift+Tab. Focando o
+   header, o primeiro Tab cai no Voltar — que é a ordem visual. O título
+   continua sendo anunciado pelo `role="status"` do App, que lê o
+   `document.title`. */
+.cabecalho-tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--esp-2);
+}
+
+/* O anel de foco vem da regra global `[tabindex]:focus-visible` de index.css;
+   aqui só falta o raio, para o halo não sair quadrado sobre o cartão. */
+.cabecalho-tela:focus-visible {
+  border-radius: var(--raio-sm);
+}
+
+/* Limite de medida de leitura. Parágrafo longo sem isto vira linha de 140
+   caracteres no monitor grande. Em `ch`, a medida acompanha a fonte sozinha —
+   inclusive agora que a fonte é fluida. */
+.medida {
+  max-width: var(--largura-leitura);
+}
+
+.medida-curta {
+  max-width: var(--largura-leitura-curta);
+}
+
+/* Superfície de tema explícito. Existe para o catálogo poder mostrar as duas
+   paletas lado a lado: `[data-tema]` num elemento qualquer já troca os tokens
+   da subárvore (ver o bloco 2 de index.css), mas alguém precisa pintar o
+   fundo, porque `background` do `body` não alcança um filho. */
+.superficie-tema {
+  background: var(--fundo);
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: var(--esp-5);
+}
+
+/* --- catálogo: nav lateral + conteúdo ------------------------------------
+   Sem @media. A nav lateral aparece quando o contêiner comporta as duas
+   colunas; abaixo disso vira faixa horizontal rolável. */
+.catalogo {
+  display: grid;
+  gap: var(--esp-7);
+  grid-template-columns: 1fr;
+}
+
+.catalogo-nav {
+  display: flex;
+  flex-direction: row;
+  gap: var(--esp-2);
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  padding-block-end: var(--esp-2);
+  border-bottom: 1px solid var(--borda);
+}
+
+@container pagina (min-width: 900px) {
+  .catalogo {
+    grid-template-columns: 216px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .catalogo-nav {
+    flex-direction: column;
+    overflow: visible;
+    border-bottom: 0;
+    position: sticky;
+    top: var(--esp-5);
+  }
+}
+
+/* Contêiner largo: a nav ganha largura em vez de deixar os rótulos quebrarem,
+   e sobra mais espaço para o palco — que é o conteúdo que interessa. */
+@container pagina (min-width: 1280px) {
+  .catalogo {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+}
+
+/* --- palco do catálogo ---------------------------------------------------
+   O palco é o contêiner de consulta dos exemplos. A largura vem de uma
+   variável setada pelo controle [Largura ▾]; `Herdar` = 100%. */
+.palco {
+  container: palco / inline-size;
+  inline-size: var(--palco-largura, 100%);
+  max-inline-size: 100%;
+  margin-inline: auto;
+  background: var(--palco-fundo, var(--card));
+  border: 1px dashed var(--borda-forte);
+  border-radius: var(--raio);
+  padding: var(--esp-5);
+  /* Zoom simulado: o palco escala, o contêiner de consulta continua medindo
+     a largura CSS real, que é justamente o que se quer inspecionar. */
+  zoom: var(--palco-zoom, 1);
+}
+
+.palco[data-fundo='pagina'] { --palco-fundo: var(--fundo); }
+.palco[data-fundo='cartao'] { --palco-fundo: var(--card); }
+
+.palco-regua {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--fonte-mono);
+  font-size: var(--tipo-xs);
+  color: var(--texto-suave);
+  padding-block-start: var(--esp-2);
+}
+
+/* --- splash --------------------------------------------------------------
+   Consulta de tamanho (largura E altura) no contêiner, não na janela:
+   abaixo de 720×560 a splash cai no layout estático, e o catálogo consegue
+   demonstrar essa queda dentro de um palco. */
+.splash {
+  container: palco / size;
+  position: relative;
+  /* Altura explícita, não só `min-height`: `container-type: size` exige
+     tamanho independente do conteúdo, e o JS da marca só liga quando o palco
+     mede pelo menos 720×560. Altura ambígua aqui vira animação parada. */
+  block-size: 100dvh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--esp-7);
+  background: var(--fundo);
+}
+
+.splash-marca-movel {
+  display: none;
+}
+
+@container palco (min-width: 720px) and (min-height: 560px) {
+  .splash-marca-movel {
+    display: block;
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    /* Posição SEMPRE por transform: translate3d, escrita pelo rAF.
+       Nunca top/left — força layout a 60 Hz. */
+    will-change: transform;
+  }
+
+  .splash[data-estatica='true'] .splash-marca-movel {
+    display: none;
+  }
+}
+
+/* A zona morta é geometria, não z-index: o bloco central mais --esp-6 de
+   margem é a parede em que a marca reflete. O JS lê este retângulo com
+   getBoundingClientRect e o expande por --esp-6. */
+.splash-bloco {
+  position: relative;
+  z-index: var(--z-elevado);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--esp-6);
+  text-align: center;
+  --margem-zona-morta: var(--esp-6);
+}
